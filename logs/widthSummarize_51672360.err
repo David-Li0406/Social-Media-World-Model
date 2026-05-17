@@ -1,18 +1,0 @@
-
-=====================================================================
-This module is only for creating or activating Python environments:
-$ mamba create -n myenv -c conda-forge python=3 <package_name>
-$ source activate myenv
-
-Only run "pip install" after activating an environment.
-Running pip without activating an environment is known to cause issues.
-
-To list available environments:
-$ mamba info --envs
-
-Other uses are not tested. More info: https://links.asu.edu/solpy
-=====================================================================
-
-  
-Loading weights:   0%|          | 0/398 [00:00<?, ?it/s]Loading weights:   0%|          | 1/398 [00:03<20:38,  3.12s/it]Loading weights:   1%|          | 3/398 [00:03<06:56,  1.05s/it]Loading weights:   1%|          | 4/398 [00:05<09:09,  1.40s/it]Loading weights:   1%|▏         | 5/398 [00:06<07:03,  1.08s/it]Loading weights:   2%|▏         | 8/398 [00:06<03:44,  1.74it/s]Loading weights:   2%|▏         | 9/398 [00:07<03:38,  1.78it/s]Loading weights:   3%|▎         | 11/398 [00:08<03:00,  2.14it/s]Loading weights:   3%|▎         | 12/398 [00:08<03:25,  1.88it/s]Loading weights:   4%|▎         | 14/398 [00:09<02:43,  2.36it/s]Loading weights:   4%|▍         | 15/398 [00:09<02:55,  2.19it/s]Loading weights:   4%|▍         | 16/398 [00:10<03:28,  1.83it/s]Loading weights:   5%|▍         | 19/398 [00:11<02:01,  3.13it/s]Loading weights:   5%|▌         | 20/398 [00:12<03:23,  1.86it/s]Loading weights:   6%|▌         | 22/398 [00:14<04:17,  1.46it/s]Loading weights:   6%|▌         | 23/398 [00:15<04:57,  1.26it/s]Loading weights:   6%|▋         | 25/398 [00:16<04:09,  1.50it/s]Loading weights:   7%|▋         | 26/398 [00:17<04:53,  1.27it/s]Loading weights:   7%|▋         | 27/398 [00:18<04:47,  1.29it/s]Loading weights:   8%|▊         | 30/398 [00:19<03:34,  1.72it/s]Loading weights:   8%|▊         | 31/398 [00:20<03:53,  1.57it/s]Loading weights:   8%|▊         | 33/398 [00:21<03:29,  1.74it/s]Loading weights:   9%|▊         | 34/398 [00:22<04:01,  1.51it/s]Loading weights:   9%|▉         | 36/398 [00:23<04:13,  1.43it/s]Loading weights:   9%|▉         | 37/398 [00:25<05:17,  1.14it/s]Loading weights:  10%|▉         | 38/398 [00:26<05:01,  1.19it/s]Loading weights:  10%|█         | 41/398 [00:27<04:03,  1.46it/s]Loading weights:  11%|█         | 42/398 [00:29<04:55,  1.20it/s]Loading weights:  95%|█████████▍| 378/398 [00:29<00:00, 107.73it/s]Loading weights: 100%|██████████| 398/398 [00:29<00:00, 13.55it/s] 
-[2026-04-21T17:45:08.046] error: *** JOB 51672360 ON sg039 CANCELLED AT 2026-04-21T17:45:08 DUE TO TIME LIMIT ***
