@@ -1,0 +1,62 @@
+
+=====================================================================
+This module is only for creating or activating Python environments:
+$ mamba create -n myenv -c conda-forge python=3 <package_name>
+$ source activate myenv
+
+Only run "pip install" after activating an environment.
+Running pip without activating an environment is known to cause issues.
+
+To list available environments:
+$ mamba info --envs
+
+Other uses are not tested. More info: https://links.asu.edu/solpy
+=====================================================================
+
+  
+Loading weights:   0%|          | 0/389 [00:00<?, ?it/s]Loading weights: 100%|██████████| 389/389 [00:00<00:00, 35528.69it/s]
+[1mRobertaModel LOAD REPORT[0m from: roberta-large
+Key                             | Status     | 
+--------------------------------+------------+-
+lm_head.bias                    | UNEXPECTED | 
+lm_head.dense.weight            | UNEXPECTED | 
+roberta.embeddings.position_ids | UNEXPECTED | 
+lm_head.layer_norm.weight       | UNEXPECTED | 
+lm_head.dense.bias              | UNEXPECTED | 
+lm_head.layer_norm.bias         | UNEXPECTED | 
+pooler.dense.bias               | MISSING    | 
+pooler.dense.weight             | MISSING    | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+- MISSING[3m	:those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.[0m
+Traceback (most recent call last):
+  File "/scratch/akutteti/reddit_dump_analysis/metrics.py", line 111, in <module>
+    evaluate(model_name, path)
+  File "/scratch/akutteti/reddit_dump_analysis/metrics.py", line 102, in evaluate
+    bs = compute_bert_score(pred_summaries, true_summaries)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/akutteti/reddit_dump_analysis/metrics.py", line 51, in compute_bert_score
+    P, R, F = bert_score(predictions, references, model_type=model_type, verbose=False)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/bert_score/score.py", line 123, in score
+    all_preds = bert_cos_score_idf(
+                ^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/bert_score/utils.py", line 616, in bert_cos_score_idf
+    embs, masks, padded_idf = get_bert_embedding(
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/bert_score/utils.py", line 445, in get_bert_embedding
+    padded_sens, padded_idf, lens, mask = collate_idf(
+                                          ^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/bert_score/utils.py", line 409, in collate_idf
+    arr = [sent_encode(tokenizer, a) for a in arr]
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/bert_score/utils.py", line 409, in <listcomp>
+    arr = [sent_encode(tokenizer, a) for a in arr]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/bert_score/utils.py", line 192, in sent_encode
+    return tokenizer.build_inputs_with_special_tokens([])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/transformers/tokenization_utils_base.py", line 1293, in __getattr__
+    raise AttributeError(f"{self.__class__.__name__} has no attribute {key}")
+AttributeError: RobertaTokenizer has no attribute build_inputs_with_special_tokens

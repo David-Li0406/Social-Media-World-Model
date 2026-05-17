@@ -1,0 +1,89 @@
+
+=====================================================================
+This module is only for creating or activating Python environments:
+$ mamba create -n myenv -c conda-forge python=3 <package_name>
+$ source activate myenv
+
+Only run "pip install" after activating an environment.
+Running pip without activating an environment is known to cause issues.
+
+To list available environments:
+$ mamba info --envs
+
+Other uses are not tested. More info: https://links.asu.edu/solpy
+=====================================================================
+
+  
+Fetching 17 files:   0%|          | 0/17 [00:00<?, ?it/s]Fetching 17 files:   6%|▌         | 1/17 [01:07<18:01, 67.59s/it]Fetching 17 files:  12%|█▏        | 2/17 [01:07<06:59, 27.96s/it]Fetching 17 files:  47%|████▋     | 8/17 [01:57<02:12, 14.70s/it]
+Could not set the permissions on the file '/home/akutteti/.cache/huggingface/hub/models--Qwen--Qwen3-32B/blobs/9966612ba7ecfc2cd2e592fb95224b86d743271ff88e172cc272a4b26382aa75.incomplete'. Error: [Errno 28] No space left on device: '/home/akutteti/.cache/huggingface/hub/models--Qwen--Qwen3-32B/tmp_2dd080d9-7cb0-4789-8934-b371af66ae8a'.
+Continuing without setting permissions.
+Traceback (most recent call last):
+  File "/scratch/akutteti/reddit_dump_analysis/test_inference.py", line 41, in <module>
+    model = AutoModelForCausalLM.from_pretrained(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/etc/python/sitecustomize.py", line 111, in wrapped
+    return orig(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/transformers/models/auto/auto_factory.py", line 374, in from_pretrained
+    return model_class.from_pretrained(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/transformers/modeling_utils.py", line 4060, in from_pretrained
+    checkpoint_files, sharded_metadata = _get_resolved_checkpoint_files(
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/transformers/modeling_utils.py", line 738, in _get_resolved_checkpoint_files
+    checkpoint_files, sharded_metadata = get_checkpoint_shard_files(
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/transformers/utils/hub.py", line 874, in get_checkpoint_shard_files
+    cached_filenames = cached_files(
+                       ^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/transformers/utils/hub.py", line 508, in cached_files
+    raise e
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/transformers/utils/hub.py", line 434, in cached_files
+    snapshot_download(
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/huggingface_hub/_snapshot_download.py", line 450, in snapshot_download
+    thread_map(
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/tqdm/contrib/concurrent.py", line 69, in thread_map
+    return _executor_map(ThreadPoolExecutor, fn, *iterables, **tqdm_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/tqdm/contrib/concurrent.py", line 51, in _executor_map
+    return list(tqdm_class(ex.map(fn, *iterables, chunksize=chunksize), **kwargs))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/tqdm/std.py", line 1181, in __iter__
+    for obj in iterable:
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/concurrent/futures/_base.py", line 619, in result_iterator
+    yield _result_or_cancel(fs.pop())
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/concurrent/futures/_base.py", line 317, in _result_or_cancel
+    return fut.result(timeout)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/concurrent/futures/_base.py", line 456, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/huggingface_hub/_snapshot_download.py", line 430, in _inner_hf_hub_download
+    hf_hub_download(  # type: ignore
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 986, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1202, in _hf_hub_download_to_cache_dir
+    _download_to_tmp_and_move(
+  File "/home/akutteti/.conda/envs/lf/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1812, in _download_to_tmp_and_move
+    with incomplete_path.open("ab") as f:
+OSError: [Errno 28] No space left on device
+/usr/local/bin/_epilog: line 60: /home/akutteti/.local/var/log/slurm/slurm_record_51672447: No space left on device
+/usr/local/bin/_epilog: line 63: /home/akutteti/.local/var/log/slurm/slurm_record_51672447: No space left on device
+/usr/local/bin/_epilog: line 64: /home/akutteti/.local/var/log/slurm/slurm_record_51672447: No space left on device
+/usr/local/bin/_epilog: line 65: /home/akutteti/.local/var/log/slurm/slurm_record_51672447: No space left on device
+/usr/local/bin/_epilog: line 73: /home/akutteti/.local/var/log/slurm/slurm_record_51672447: No space left on device
+/usr/local/bin/_epilog: line 74: /home/akutteti/.local/var/log/slurm/slurm_record_51672447: No space left on device
+[2026-04-21T02:27:52.904] error: --task-epilog failed status=1

@@ -1,0 +1,18 @@
+
+============================================================
+Model: Qwen3-32B  (1900 records)
+============================================================
+  Valid records: 801  (skipped 1099 with null predictions)
+  Score MSE:               3404479.0599
+  Width MSE:               632.9076
+  Controversiality F1 (macro): 0.3022
+    (ground truth positive rate: 0.031, predicted: 0.628)
+
+============================================================
+Model: Qwen3-4B  (1900 records)
+============================================================
+  Valid records: 1900  (skipped 0 with null predictions)
+  Score MSE:               2427835.1942
+  Width MSE:               563.3605
+  Controversiality F1 (macro): 0.2230
+    (ground truth positive rate: 0.024, predicted: 0.752)
