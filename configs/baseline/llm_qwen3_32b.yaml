@@ -1,0 +1,6 @@
+baseline: llm
+params:
+  model_id: Qwen/Qwen3-32B
+  max_new_tokens: 500
+  retries: 3
+  load_in_4bit: true

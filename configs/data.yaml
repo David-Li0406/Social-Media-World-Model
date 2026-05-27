@@ -1,0 +1,22 @@
+# Data pipeline config. All paths are relative to the repo root.
+seed: 42
+test_fraction: 0.2
+min_root_score: 20            # buildChain.py used score>=20 on the root of selected chains
+
+paths:
+  parquet: RC_2025-12_politics.parquet
+  trees: tree_data/RC_2025-12_politics_trees.json
+  chains: chain_data/RC_2025-12_politics_chains.json
+  chain_sets: final_sets/RC_2025-12_politics_final_set.json
+  sim_output: sim_output/RC_2025-12_politics_width_chain01.jsonl
+  train_jsonl: train_test/RC_2025-12_politics_width_chain01_train.jsonl
+  test_jsonl: train_test/RC_2025-12_politics_width_chain01_test.jsonl
+
+summarizer:
+  model_id: Qwen/Qwen3-4B
+  max_new_tokens: 500
+  retries: 3
+  load_in_4bit: true
+
+prompt:
+  template: default                # only one for now; keep room for variants

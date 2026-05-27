@@ -1,0 +1,7 @@
+baseline: encoder
+params:
+  model_id: distilbert-base-uncased
+  max_length: 256
+  epochs: 3
+  batch_size: 16
+  lr: 2.0e-5

@@ -1,0 +1,21 @@
+seed: 42
+test_fraction: 0.2
+min_root_score: 20
+
+paths:
+  parquet: RC_2025-12_politics.parquet
+  trees: tree_data/RC_2025-12_politics_trees.json
+  chains: chain_data/RC_2025-12_politics_chains.json
+  chain_sets: final_sets/RC_2025-12_politics_final_set.json
+  sim_output: smoke/sim_subset.jsonl
+  train_jsonl: smoke/train.jsonl
+  test_jsonl: smoke/test.jsonl
+
+summarizer:
+  model_id: Qwen/Qwen3-4B
+  max_new_tokens: 500
+  retries: 3
+  load_in_4bit: true
+
+prompt:
+  template: default

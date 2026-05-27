@@ -1,0 +1,4 @@
+baseline: retrieval_tfidf
+params:
+  k: 5
+  max_features: 30000

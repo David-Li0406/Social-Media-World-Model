@@ -1,0 +1,6 @@
+baseline: llm
+params:
+  model_id: meta-llama/Llama-3.3-70B-Instruct
+  max_new_tokens: 500
+  retries: 3
+  load_in_4bit: true

@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smwm"
+version = "0.1.0"
+description = "Social Media World Model: prediction baselines for Reddit-style engagement signals"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "scipy",
+    "pandas",
+    "pyyaml",
+    "scikit-learn",
+]
+
+[project.optional-dependencies]
+retrieval = ["sentence-transformers"]
+encoder = ["torch", "transformers"]
+llm = ["torch", "transformers", "bitsandbytes", "peft", "trl", "huggingface_hub", "datasets"]
+data = ["pyarrow"]
+
+[project.scripts]
+smwm-data = "smwm.cli.run_data:main"
+smwm-infer = "smwm.cli.run_inference:main"
+smwm-eval = "smwm.cli.run_eval:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
