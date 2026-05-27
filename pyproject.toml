@@ -19,6 +19,18 @@ dependencies = [
 retrieval = ["sentence-transformers"]
 encoder = ["torch", "transformers"]
 llm = ["torch", "transformers", "bitsandbytes", "peft", "trl", "huggingface_hub", "datasets"]
+llm_sft = [
+    "torch",
+    "transformers",
+    "peft",
+    "huggingface_hub",
+    "datasets",
+    "deepspeed",
+    "openrlhf",
+    "accelerate",
+    "bitsandbytes",
+    "sentencepiece",
+]
 data = ["pyarrow"]
 
 [project.scripts]

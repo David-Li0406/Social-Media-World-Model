@@ -1,0 +1,89 @@
+name: remote-gpu-exp
+
+# Manual trigger only. The self-hosted runner on Machine B picks this up,
+# prepares data, runs the SFT training script, and uploads small artifacts.
+on:
+  workflow_dispatch:
+    inputs:
+      config:
+        description: "Path to a baseline config YAML"
+        required: true
+        default: "configs/baseline/llm_sft_qwen3_4b_debug.yaml"
+      run_name:
+        description: "Experiment name (also the artifact name)"
+        required: true
+        default: "sft_qwen3_4b_debug"
+      data_version:
+        description: "Dataset version (bump when prepare_data.sh logic changes)"
+        required: true
+        default: "v1"
+
+jobs:
+  run:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Show machine info
+        run: |
+          hostname
+          nvidia-smi || true
+          uv --version || echo "uv not found"
+
+      - name: Setup uv environment
+        run: |
+          export UV_CACHE_DIR="$HOME/.cache/uv"
+          # Install the package along with the heavy llm_sft extras
+          # (openrlhf, deepspeed, peft, transformers, torch).
+          uv sync --frozen --extra llm_sft || uv sync --extra llm_sft
+
+      - name: Prepare data
+        run: |
+          export DATA_ROOT="$HOME/datasets/smwm"
+          export DATA_VERSION="${{ inputs.data_version }}"
+          export HF_HOME="$HOME/hf_cache"
+          export HF_DATASETS_CACHE="$HF_HOME/datasets"
+          export TRANSFORMERS_CACHE="$HF_HOME/transformers"
+          ./scripts/prepare_data.sh
+
+      - name: Run experiment
+        env:
+          HUGGING_FACE: ${{ secrets.HUGGING_FACE }}
+        run: |
+          export DATA_ROOT="$HOME/datasets/smwm"
+          export HF_HOME="$HOME/hf_cache"
+          export HF_DATASETS_CACHE="$HF_HOME/datasets"
+          export TRANSFORMERS_CACHE="$HF_HOME/transformers"
+          export CUDA_VISIBLE_DEVICES=0,1
+          CONFIG="${{ inputs.config }}" \
+          RUN_NAME="${{ inputs.run_name }}" \
+            ./scripts/gpu_run.sh
+
+      - name: Write summary
+        if: always()
+        run: |
+          RUN="${{ inputs.run_name }}"
+          echo "## Experiment Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Config: ${{ inputs.config }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Run name: ${{ inputs.run_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Data version: ${{ inputs.data_version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: $(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f "runs/$RUN/metrics.json" ]; then
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat "runs/$RUN/metrics.json" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.run_name }}
+          path: |
+            runs/${{ inputs.run_name }}/train.log
+            runs/${{ inputs.run_name }}/metrics.json
+            runs/${{ inputs.run_name }}/config.yaml

@@ -1,0 +1,25 @@
+# SFT-tuned Qwen3-4B baseline (LoRA via OpenRLHF).
+# fit() materialises the adapter under adapter_path; predict() loads base+LoRA.
+baseline: llm_sft
+params:
+  model_id: Qwen/Qwen3-4B
+  run_name: sft_qwen3_4b
+  adapter_path: /scratch/daweili5/smwm/runs/sft_qwen3_4b/adapter
+  max_len: 4096
+  epochs: 2
+  learning_rate: 2.0e-4
+  train_batch_size: 16
+  micro_train_batch_size: 1
+  lora_rank: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules: all-linear
+  gpus: "0,1"
+  bf16: true
+  gradient_checkpointing: true
+  flash_attn: false
+  max_new_tokens: 500
+  retries: 3
+  enable_thinking: false
+  load_in_4bit: false
+  skip_train_if_adapter_exists: true

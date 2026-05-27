@@ -1,0 +1,24 @@
+# Debug SFT config: 1 epoch, smoke-test data, smaller LoRA, fast.
+baseline: llm_sft
+params:
+  model_id: Qwen/Qwen3-4B
+  run_name: sft_qwen3_4b_debug
+  adapter_path: /scratch/daweili5/smwm/runs/sft_qwen3_4b_debug/adapter
+  max_len: 2048
+  epochs: 1
+  learning_rate: 2.0e-4
+  train_batch_size: 8
+  micro_train_batch_size: 1
+  lora_rank: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  target_modules: all-linear
+  gpus: "0,1"
+  bf16: true
+  gradient_checkpointing: true
+  flash_attn: false
+  max_new_tokens: 500
+  retries: 3
+  enable_thinking: false
+  load_in_4bit: false
+  skip_train_if_adapter_exists: false

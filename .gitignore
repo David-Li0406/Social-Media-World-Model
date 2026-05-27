@@ -10,3 +10,14 @@ __pycache__/
 .venv/
 build/
 dist/
+# GH Actions / GPU runner artifacts (per project CLAUDE.md):
+runs/
+downloaded_runs/
+wandb/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+# Hugging Face & uv local caches if they ever end up in the workspace:
+.cache/
+hf_cache/
