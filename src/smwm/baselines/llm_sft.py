@@ -273,8 +273,10 @@ class LLMSFTBaseline(Baseline):
             remove_columns=["text"],
         )
 
+        # eager attention avoids SDPA/flash native kernels that can crash on
+        # some GPUs (e.g. H20) with a bare SIGFPE and no Python traceback.
         model = AutoModelForCausalLM.from_pretrained(
-            self.model_id, torch_dtype=torch.bfloat16
+            self.model_id, dtype=torch.bfloat16, attn_implementation="eager"
         )
         model.config.use_cache = False
         peft_config = LoraConfig(
@@ -303,6 +305,8 @@ class LLMSFTBaseline(Baseline):
             save_strategy="no",
             report_to=[],
             gradient_checkpointing=self.gradient_checkpointing,
+            dataloader_num_workers=0,
+            dataloader_pin_memory=False,
         )
         collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
         trainer = Trainer(
