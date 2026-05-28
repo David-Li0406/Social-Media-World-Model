@@ -32,6 +32,20 @@ jobs:
           nvidia-smi || true
           uv --version || echo "uv not found"
 
+      - name: Bootstrap uv
+        run: |
+          # The self-hosted runner doesn't ship uv. Install it to ~/.local/bin
+          # if missing and expose it to all later steps via $GITHUB_PATH.
+          if ! command -v uv >/dev/null 2>&1; then
+            python3 -m pip install --user -U uv \
+              || curl -LsSf https://astral.sh/uv/install.sh | sh
+          fi
+          for d in "$HOME/.local/bin" "$HOME/.cargo/bin"; do
+            if [ -x "$d/uv" ]; then echo "$d" >> "$GITHUB_PATH"; export PATH="$d:$PATH"; fi
+          done
+          command -v uv
+          uv --version
+
       - name: Setup uv environment
         run: |
           export UV_CACHE_DIR="$HOME/.cache/uv"
