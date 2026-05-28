@@ -52,7 +52,9 @@ class LLMSFTBaseline(Baseline):
         lora_alpha: int = 32,
         lora_dropout: float = 0.05,
         target_modules: str = "q_proj k_proj v_proj o_proj gate_proj up_proj down_proj",
-        # backend
+        # backend: "peft" (transformers Trainer + LoRA, reliable) or
+        # "openrlhf" (deepspeed; requires a buildable flash-attn).
+        backend: str = "peft",
         gpus: str = "0,1",
         bf16: bool = True,
         gradient_checkpointing: bool = True,
@@ -83,6 +85,7 @@ class LLMSFTBaseline(Baseline):
         self.lora_alpha = int(lora_alpha)
         self.lora_dropout = float(lora_dropout)
         self.target_modules = target_modules
+        self.backend = backend
         self.gpus = gpus
         self.bf16 = bool(bf16)
         self.gradient_checkpointing = bool(gradient_checkpointing)
@@ -177,9 +180,13 @@ class LLMSFTBaseline(Baseline):
         if self.skip_train_if_adapter_exists and (self.adapter_path / "adapter_model.safetensors").exists():
             print(f"[llm_sft] adapter already present at {self.adapter_path}; skipping training")
             return
-
         self.adapter_path.mkdir(parents=True, exist_ok=True)
+        if self.backend == "openrlhf":
+            self._fit_openrlhf(train_records)
+        else:
+            self._fit_peft(train_records)
 
+    def _fit_openrlhf(self, train_records: list[dict]) -> None:
         # Materialize the OpenRLHF dataset. We always re-write so the file
         # reflects the current train_records argument (smoke vs. full).
         train_jsonl = self.adapter_path / "train.jsonl"
@@ -202,6 +209,99 @@ class LLMSFTBaseline(Baseline):
                 f"{log_path}:\n" + "\n".join(tail)
             )
         print(f"[llm_sft] training done; adapter at {self.adapter_path}")
+
+    def _fit_peft(self, train_records: list[dict]) -> None:
+        """transformers Trainer + PEFT LoRA SFT on a single GPU.
+
+        Mirrors the repo's original fineTune.py: concatenate prompt+completion
+        and train causal-LM on the full text. Reliable deps (no flash-attn /
+        deepspeed). Trains on GPU 0 of the allotted set to avoid DataParallel
+        pitfalls with gradient checkpointing.
+        """
+        # Pin to a single visible GPU before torch is imported in this process.
+        first_gpu = self.gpus.split(",")[0].strip() or "0"
+        os.environ["CUDA_VISIBLE_DEVICES"] = first_gpu
+        os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
+        import torch
+        from datasets import Dataset
+        from peft import LoraConfig, get_peft_model
+        from transformers import (
+            AutoModelForCausalLM,
+            AutoTokenizer,
+            DataCollatorForLanguageModeling,
+            Trainer,
+            TrainingArguments,
+        )
+
+        token = os.getenv("HUGGING_FACE")
+        if token:
+            from huggingface_hub import login
+
+            login(token)
+        assert torch.cuda.is_available(), "No CUDA device found"
+        print(f"[llm_sft/peft] device={torch.cuda.get_device_name(0)} (CUDA_VISIBLE_DEVICES={first_gpu})")
+
+        tokenizer = AutoTokenizer.from_pretrained(self.model_id)
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+
+        texts: list[str] = []
+        for r in train_records:
+            p, c = r.get("prompt"), r.get("completion")
+            if p is None or c is None:
+                continue
+            texts.append(p + "\n" + c + tokenizer.eos_token)
+        if not texts:
+            raise RuntimeError("no usable training records (missing prompt/completion)")
+        print(f"[llm_sft/peft] {len(texts)} training texts; max_len={self.max_len}")
+
+        ds = Dataset.from_dict({"text": texts})
+        ds = ds.map(
+            lambda b: tokenizer(b["text"], truncation=True, max_length=self.max_len),
+            batched=True,
+            remove_columns=["text"],
+        )
+
+        model = AutoModelForCausalLM.from_pretrained(
+            self.model_id, torch_dtype=torch.bfloat16
+        )
+        model.config.use_cache = False
+        peft_config = LoraConfig(
+            r=self.lora_rank,
+            lora_alpha=self.lora_alpha,
+            lora_dropout=self.lora_dropout,
+            bias="none",
+            task_type="CAUSAL_LM",
+            target_modules=self.target_modules.split(),
+        )
+        model = get_peft_model(model, peft_config)
+        model.print_trainable_parameters()
+        if self.gradient_checkpointing:
+            model.enable_input_require_grads()  # needed for PEFT + grad checkpointing
+
+        per_device = max(1, self.micro_train_batch_size)
+        grad_accum = max(1, self.train_batch_size // per_device)
+        args = TrainingArguments(
+            output_dir=str(self.adapter_path / "hf_trainer"),
+            per_device_train_batch_size=per_device,
+            gradient_accumulation_steps=grad_accum,
+            num_train_epochs=self.epochs,
+            learning_rate=self.learning_rate,
+            bf16=self.bf16,
+            logging_steps=10,
+            save_strategy="no",
+            report_to=[],
+            gradient_checkpointing=self.gradient_checkpointing,
+        )
+        collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+        trainer = Trainer(
+            model=model, args=args, train_dataset=ds, data_collator=collator
+        )
+        trainer.train()
+        model.save_pretrained(str(self.adapter_path))
+        tokenizer.save_pretrained(str(self.adapter_path))
+        print(f"[llm_sft/peft] adapter saved to {self.adapter_path}")
 
     # ---------------------------------------------------------------- predict
     def _load(self) -> None:

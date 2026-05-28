@@ -19,18 +19,21 @@ dependencies = [
 retrieval = ["sentence-transformers"]
 encoder = ["torch", "transformers"]
 llm = ["torch", "transformers", "bitsandbytes", "peft", "trl", "huggingface_hub", "datasets"]
+# Default SFT backend: transformers Trainer + PEFT LoRA. Reliable wheels only
+# (no flash-attn / deepspeed source builds).
 llm_sft = [
     "torch",
     "transformers",
     "peft",
+    "accelerate",
     "huggingface_hub",
     "datasets",
-    "deepspeed",
-    "openrlhf",
-    "accelerate",
     "bitsandbytes",
     "sentencepiece",
 ]
+# Optional OpenRLHF backend (backend: openrlhf). Pulls flash-attn + deepspeed,
+# which require a CUDA toolchain to build from source.
+llm_sft_openrlhf = ["openrlhf", "deepspeed"]
 data = ["pyarrow"]
 
 [project.scripts]
