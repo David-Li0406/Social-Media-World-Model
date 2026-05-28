@@ -17,6 +17,12 @@ on:
         description: "Dataset version (bump when prepare_data.sh logic changes)"
         required: true
         default: "v1"
+      mode:
+        description: "train (fit adapter) or infer (predict with trained adapter)"
+        required: true
+        default: "train"
+        type: choice
+        options: ["train", "infer"]
 
 jobs:
   run:
@@ -75,6 +81,7 @@ jobs:
           export CUDA_VISIBLE_DEVICES=0,1
           CONFIG="${{ inputs.config }}" \
           RUN_NAME="${{ inputs.run_name }}" \
+          MODE="${{ inputs.mode }}" \
             ./scripts/gpu_run.sh
 
       - name: Write summary
@@ -98,8 +105,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.run_name }}
+          name: ${{ inputs.run_name }}-${{ inputs.mode }}
           path: |
             runs/${{ inputs.run_name }}/train.log
             runs/${{ inputs.run_name }}/metrics.json
             runs/${{ inputs.run_name }}/config.yaml
+            runs/${{ inputs.run_name }}/predictions.jsonl

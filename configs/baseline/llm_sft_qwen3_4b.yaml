@@ -19,7 +19,7 @@ params:
   bf16: true
   gradient_checkpointing: false
   flash_attn: false
-  max_new_tokens: 500
+  max_new_tokens: 256   # tuned-down for faster full-test inference
   retries: 3
   enable_thinking: false
   load_in_4bit: false
