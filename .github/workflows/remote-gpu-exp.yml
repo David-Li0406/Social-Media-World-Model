@@ -49,10 +49,10 @@ jobs:
       - name: Setup uv environment
         run: |
           export UV_CACHE_DIR="$HOME/.cache/uv"
-          # openrlhf 0.10.3 only ships cp310/311/312 wheels, so pin Python 3.12.
-          # Install the package along with the heavy llm_sft extras
-          # (openrlhf, deepspeed, peft, transformers, torch).
-          uv sync --python 3.12 --extra llm_sft
+          # Pin Python 3.12 (openrlhf wheels) and a CUDA 12.1 torch build —
+          # the runner's driver is CUDA 12.2, so the default cu13 torch wheel
+          # reports "driver too old". cu121 is forward-compatible with 12.2.
+          uv sync --python 3.12 --extra llm_sft --torch-backend=cu121
 
       - name: Prepare data
         run: |
