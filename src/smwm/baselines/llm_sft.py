@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -41,6 +42,27 @@ def _default_scratch() -> str:
     if env:
         return env
     return os.path.expanduser("~/smwm")
+
+
+_RE_SCORE = re.compile(r'"score"\s*:\s*(-?\d+)')
+_RE_CONTR = re.compile(r'"controversiality"\s*:\s*(\d+)')
+_RE_WIDTH = re.compile(r'"width"\s*:\s*(-?\d+)')
+
+
+def _regex_extract(raw: str) -> dict:
+    """Best-effort recovery of numeric fields from malformed JSON output.
+
+    SFT models sometimes emit a stray quote before the closing brace, which
+    breaks json.loads even though score/controversiality/width are intact.
+    """
+    out: dict = {}
+    if not raw:
+        return out
+    for key, rx in (("score", _RE_SCORE), ("controversiality", _RE_CONTR), ("width", _RE_WIDTH)):
+        m = rx.search(raw)
+        if m:
+            out[key] = int(m.group(1))
+    return out
 
 
 @register("llm_sft")
@@ -393,17 +415,14 @@ class LLMSFTBaseline(Baseline):
             prompt = make_prompt(get_context(record), get_stimulus(record))
         parsed, raw = self._generate_json(prompt)
         if parsed is None:
-            return {
-                "score": 0,
-                "width": 0,
-                "controversiality": 0,
-                "reply_summary": "",
-                "_raw": raw,
-            }
+            # Lenient fallback: SFT models sometimes emit slightly malformed
+            # JSON (e.g. a stray quote before the closing brace) that breaks
+            # json.loads. The numeric fields are still recoverable by regex.
+            parsed = _regex_extract(raw)
         return {
-            "score": int(parsed.get("score", 0)),
-            "width": int(parsed.get("width", 0)),
-            "controversiality": int(parsed.get("controversiality", 0)),
-            "reply_summary": str(parsed.get("reply_summary", "")),
+            "score": int(parsed.get("score", 0) or 0),
+            "width": int(parsed.get("width", 0) or 0),
+            "controversiality": int(parsed.get("controversiality", 0) or 0),
+            "reply_summary": str(parsed.get("reply_summary", "") or ""),
             "_raw": raw,
         }

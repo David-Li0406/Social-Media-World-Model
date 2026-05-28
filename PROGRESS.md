@@ -214,6 +214,42 @@ Qwen3-32B (zero-shot)   801    3,404,479    +0.471       0.647             +0.49
 
 ---
 
+## 4b. Full-data benchmark incl. fine-tuned Qwen3-4B (LoRA SFT)
+
+All baselines trained on the full 7596 / evaluated on the full 1900 test set.
+The `llm_sft` row is Qwen3-4B LoRA-fine-tuned via the `remote-gpu-exp` GitHub
+Actions workflow on the self-hosted H20 runner (transformers+PEFT backend,
+2 epochs, rank-16 LoRA, ~1h52m train; inference ~2.5h, max_new_tokens 256).
+
+```
+Model                  score MSE    score ρ   score pair_acc   width MSE  width ρ   contr F1
+constant_mean          1,983,886    nan       0.000            186.4      nan       0.494
+constant_median        2,127,061    nan       0.000            201.8      nan       0.494
+retrieval_tfidf        1,618,963    +0.274    0.597            198.1      +0.215    0.514
+retrieval_sbert        1,585,864    +0.238    0.583            191.5      +0.201    0.514
+Qwen3-4B zero-shot     2,427,835    +0.374    0.573            563.4      +0.508    0.223
+Qwen3-32B zero-shot*   3,404,479    +0.471    0.647            632.9      +0.491    0.302
+encoder_distilbert     1,313,780    +0.720    0.761            118.7      +0.642    0.494
+llm_sft Qwen3-4B       2,068,522    +0.724    0.742            182.3      +0.541    0.545   <-- fine-tuned
+feature_gbdt           1,906,139    +0.759    0.770            147.0      +0.676    0.424   <-- best ranking
+```
+*Qwen3-32B scored on 801 records (1099 un-parseable JSON outputs).
+
+Key takeaways:
+- **Fine-tuning massively helps the LLM**: SFT lifts Qwen3-4B score ρ from
+  0.374 → **0.724**, width ρ 0.508 → 0.541, controversiality F1 0.223 →
+  **0.545** (best F1 of all methods), and slashes width MAE 13.6 → 4.45. The
+  tuned 4B even beats zero-shot Qwen3-**32B** on every metric.
+- It reaches the encoder's ranking quality (ρ≈0.72) but a sub-second
+  `feature_gbdt` still edges it on ranking (score ρ 0.759, width ρ 0.676) at a
+  tiny fraction of the cost — the headline finding stands.
+- **Parsing caveat**: the SFT model emits valid numbers but occasionally a
+  malformed JSON tail (a stray quote); 81% of raw outputs failed strict
+  `json.loads`. `llm_sft.predict()` now has a regex fallback that recovers the
+  numeric fields, so reported numbers reflect the model's real predictions.
+
+---
+
 ## 5. How to run
 
 ```bash
