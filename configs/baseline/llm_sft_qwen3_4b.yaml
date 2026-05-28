@@ -17,7 +17,7 @@ params:
   backend: peft
   gpus: "0,1"
   bf16: true
-  gradient_checkpointing: false
+  gradient_checkpointing: true   # bounds activation memory at max_len 4096
   flash_attn: false
   max_new_tokens: 256   # tuned-down for faster full-test inference
   retries: 3

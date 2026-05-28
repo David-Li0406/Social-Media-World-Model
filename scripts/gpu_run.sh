@@ -22,6 +22,8 @@ export TOKENIZERS_PARALLELISM=false
 export SMWM_SCRATCH="${SMWM_SCRATCH:-$HOME/smwm}"
 # Dump a C-level traceback if a native lib crashes (SIGSEGV/SIGFPE/etc.).
 export PYTHONFAULTHANDLER=1
+# Reduce CUDA allocator fragmentation for long-sequence training.
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 export HF_HOME="${HF_HOME:-$HOME/hf_cache}"
 export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-$HF_HOME/datasets}"
 export TRANSFORMERS_CACHE="${TRANSFORMERS_CACHE:-$HF_HOME/transformers}"
