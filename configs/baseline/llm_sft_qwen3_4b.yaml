@@ -4,7 +4,7 @@ baseline: llm_sft
 params:
   model_id: Qwen/Qwen3-4B
   run_name: sft_qwen3_4b
-  adapter_path: /scratch/daweili5/smwm/runs/sft_qwen3_4b/adapter
+  # adapter_path defaults to $SMWM_SCRATCH/runs/<run_name>/adapter (~/smwm on the runner)
   max_len: 4096
   epochs: 2
   learning_rate: 2.0e-4

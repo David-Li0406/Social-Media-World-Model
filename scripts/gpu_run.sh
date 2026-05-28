@@ -14,6 +14,9 @@ DATA_ROOT="${DATA_ROOT:-$HOME/datasets/smwm}"
 # GPUs 0,1 (per meta-skill CLAUDE.md). DeepSpeed honours CUDA_VISIBLE_DEVICES.
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1}"
 export TOKENIZERS_PARALLELISM=false
+# Where large artifacts (LoRA adapter, checkpoints) live on Machine B.
+# /scratch doesn't exist on the runner, so default to a persistent HOME dir.
+export SMWM_SCRATCH="${SMWM_SCRATCH:-$HOME/smwm}"
 export HF_HOME="${HF_HOME:-$HOME/hf_cache}"
 export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-$HF_HOME/datasets}"
 export TRANSFORMERS_CACHE="${TRANSFORMERS_CACHE:-$HF_HOME/transformers}"

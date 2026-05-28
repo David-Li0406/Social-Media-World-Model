@@ -30,7 +30,17 @@ from .base import Baseline
 from .registry import register
 
 
-DEFAULT_SCRATCH = "/scratch/daweili5/smwm"
+def _default_scratch() -> str:
+    """Where to store the (large) LoRA adapter + checkpoints.
+
+    Machine A (ASU SOL) has /scratch/daweili5; the GPU runner (Machine B) does
+    not, so honour $SMWM_SCRATCH and fall back to ~/smwm (writable + persistent
+    on the runner). Never the git repo — runs/ is .gitignore'd anyway.
+    """
+    env = os.getenv("SMWM_SCRATCH")
+    if env:
+        return env
+    return os.path.expanduser("~/smwm")
 
 
 @register("llm_sft")
@@ -74,7 +84,7 @@ class LLMSFTBaseline(Baseline):
         self.adapter_path = Path(
             adapter_path
             if adapter_path
-            else f"{DEFAULT_SCRATCH}/runs/{run_name}/adapter"
+            else f"{_default_scratch()}/runs/{run_name}/adapter"
         )
         self.max_len = int(max_len)
         self.epochs = int(epochs)
