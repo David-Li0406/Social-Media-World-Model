@@ -43,3 +43,14 @@ smwm-eval = "smwm.cli.run_eval:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# Route torch to the CUDA 12.1 wheel index. The GPU runner's driver is CUDA
+# 12.2; the default PyPI torch (cu13) reports "driver too old". cu121 wheels
+# are forward-compatible with the 12.2 driver. Only affects `uv` installs.
+[tool.uv.sources]
+torch = { index = "pytorch-cu121" }
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true

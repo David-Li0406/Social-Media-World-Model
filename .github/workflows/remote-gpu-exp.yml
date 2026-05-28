@@ -49,10 +49,11 @@ jobs:
       - name: Setup uv environment
         run: |
           export UV_CACHE_DIR="$HOME/.cache/uv"
-          # Pin Python 3.12 (openrlhf wheels) and a CUDA 12.1 torch build —
-          # the runner's driver is CUDA 12.2, so the default cu13 torch wheel
-          # reports "driver too old". cu121 is forward-compatible with 12.2.
-          uv sync --python 3.12 --extra llm_sft --torch-backend=cu121
+          # Pin Python 3.12 (openrlhf wheels). torch is routed to the CUDA 12.1
+          # index in pyproject.toml ([tool.uv.sources]) because the runner's
+          # driver is CUDA 12.2 and the default cu13 wheel reports "driver too
+          # old"; cu121 is forward-compatible with 12.2.
+          uv sync --python 3.12 --extra llm_sft
 
       - name: Prepare data
         run: |
