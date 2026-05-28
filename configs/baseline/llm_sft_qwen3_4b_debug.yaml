@@ -16,7 +16,7 @@ params:
   backend: peft
   gpus: "0,1"
   bf16: true
-  gradient_checkpointing: true
+  gradient_checkpointing: false
   flash_attn: false
   max_new_tokens: 500
   retries: 3
