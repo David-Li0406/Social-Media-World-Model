@@ -51,7 +51,7 @@ class LLMSFTBaseline(Baseline):
         lora_rank: int = 16,
         lora_alpha: int = 32,
         lora_dropout: float = 0.05,
-        target_modules: str = "all-linear",
+        target_modules: str = "q_proj k_proj v_proj o_proj gate_proj up_proj down_proj",
         # backend
         gpus: str = "0,1",
         bf16: bool = True,
@@ -152,7 +152,7 @@ class LLMSFTBaseline(Baseline):
             "--lora_dropout",
             str(self.lora_dropout),
             "--target_modules",
-            self.target_modules,
+            *self.target_modules.split(),
             "--zero_stage",
             "2",
             "--save_steps",
@@ -161,9 +161,6 @@ class LLMSFTBaseline(Baseline):
             "10",
             "--eval_steps",
             "-1",
-            "--adam_offload",
-            "--use_tensorboard",
-            str(self.adapter_path / "tb"),
         ]
         if self.bf16:
             cmd.append("--bf16")

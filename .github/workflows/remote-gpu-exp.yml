@@ -49,9 +49,10 @@ jobs:
       - name: Setup uv environment
         run: |
           export UV_CACHE_DIR="$HOME/.cache/uv"
+          # openrlhf 0.10.3 only ships cp310/311/312 wheels, so pin Python 3.12.
           # Install the package along with the heavy llm_sft extras
           # (openrlhf, deepspeed, peft, transformers, torch).
-          uv sync --frozen --extra llm_sft || uv sync --extra llm_sft
+          uv sync --python 3.12 --extra llm_sft
 
       - name: Prepare data
         run: |
