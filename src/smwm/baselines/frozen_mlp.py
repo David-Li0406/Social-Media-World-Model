@@ -13,11 +13,13 @@ from .base import Baseline, get_context, get_ground_truth, get_stimulus
 from .registry import register
 
 
-def _record_text(record: dict) -> str:
+def _record_text(record: dict, max_chars: int = 1200) -> str:
     ctx = get_context(record)
     stim = get_stimulus(record)
     ctx_text = " \n ".join((c.get("body") or "") for c in ctx)
-    return ctx_text + " [SEP] " + (stim.get("body") or "")
+    text = ctx_text + " [SEP] " + (stim.get("body") or "")
+    # Cap length: stimulus (most informative) sits at the end, so keep the tail.
+    return text[-max_chars:]
 
 
 @register("frozen_mlp")
@@ -42,6 +44,8 @@ class FrozenEmbeddingMLP(Baseline):
             from sentence_transformers import SentenceTransformer
 
             self._encoder = SentenceTransformer(self.model_id, device=self.device)
+            # Short sequences keep CPU encoding fast (stimulus is short text).
+            self._encoder.max_seq_length = 128
 
     def _embed(self, records: list[dict]) -> np.ndarray:
         self._load()

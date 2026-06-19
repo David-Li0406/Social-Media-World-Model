@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression, PoissonRegressor
+from sklearn.preprocessing import StandardScaler
 
 from ._features import safe_float, safe_int
 from .base import Baseline, get_context, get_ground_truth, get_stimulus
@@ -39,9 +40,14 @@ def _cascade_drivers(record: dict) -> list[float]:
 
 @register("hawkes")
 class HawkesCascade(Baseline):
-    def __init__(self, **kwargs):
-        self.width_reg = PoissonRegressor(max_iter=2000)
-        self.score_reg = PoissonRegressor(max_iter=2000)
+    def __init__(self, alpha: float = 1e-3, **kwargs):
+        # Default PoissonRegressor alpha=1.0 over-shrinks the few cascade
+        # drivers to an intercept-only (constant) fit; use light regularization.
+        # StandardScaler is essential: the raw body-length driver (~1000s of
+        # chars) on a log-link otherwise dominates and collapses the fit.
+        self.scaler = StandardScaler()
+        self.width_reg = PoissonRegressor(alpha=alpha, max_iter=3000)
+        self.score_reg = PoissonRegressor(alpha=alpha, max_iter=3000)
         self.contr_clf = LogisticRegression(max_iter=1000, class_weight="balanced")
         self._has_two_classes = True
         self._majority_contr = 0
@@ -56,7 +62,7 @@ class HawkesCascade(Baseline):
             yw.append(max(float(g.get("width", 0)), 0.0))
             ys.append(max(float(g.get("score", 0)), 0.0))
             yc.append(int(g.get("controversiality", 0)))
-        X = np.asarray(X, dtype=float)
+        X = self.scaler.fit_transform(np.asarray(X, dtype=float))
         self.width_reg.fit(X, np.asarray(yw))
         self.score_reg.fit(X, np.asarray(ys))
         yc = np.asarray(yc, dtype=int)
@@ -68,7 +74,7 @@ class HawkesCascade(Baseline):
             self._majority_contr = int(yc[0]) if len(yc) else 0
 
     def predict(self, record: dict) -> dict:
-        x = np.asarray([_cascade_drivers(record)], dtype=float)
+        x = self.scaler.transform(np.asarray([_cascade_drivers(record)], dtype=float))
         w = float(self.width_reg.predict(x)[0])
         s = float(self.score_reg.predict(x)[0])
         c = int(self.contr_clf.predict(x)[0]) if self._has_two_classes else self._majority_contr
