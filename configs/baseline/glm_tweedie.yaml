@@ -1,0 +1,3 @@
+baseline: glm_tweedie
+params:
+  tweedie_power: 1.5

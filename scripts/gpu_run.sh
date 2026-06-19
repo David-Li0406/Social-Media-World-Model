@@ -14,8 +14,8 @@ RUN_NAME="${RUN_NAME:?need RUN_NAME}"
 DATA_ROOT="${DATA_ROOT:-$HOME/datasets/smwm}"
 MODE="${MODE:-train}"
 
-# GPUs 0,1 (per meta-skill CLAUDE.md). DeepSpeed honours CUDA_VISIBLE_DEVICES.
-export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1}"
+# GPUs 4-7 on Machine B (per user directive). torch/peft honour CUDA_VISIBLE_DEVICES.
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-4,5,6,7}"
 export TOKENIZERS_PARALLELISM=false
 # Where large artifacts (LoRA adapter, checkpoints) live on Machine B.
 # /scratch doesn't exist on the runner, so default to a persistent HOME dir.

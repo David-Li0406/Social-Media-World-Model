@@ -1,0 +1,9 @@
+# Domain-pretrained social-media encoder (Twitter-RoBERTa). Same code as the
+# `encoder` baseline, different backbone. Needs GPU (runner).
+baseline: encoder
+params:
+  model_id: cardiffnlp/twitter-roberta-base-2022-154m
+  max_length: 256
+  epochs: 3
+  batch_size: 16
+  lr: 2.0e-5

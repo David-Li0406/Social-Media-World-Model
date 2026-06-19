@@ -1,0 +1,6 @@
+baseline: llm_fewshot
+params:
+  model_id: Qwen/Qwen3-4B
+  k: 4
+  max_new_tokens: 256
+  load_in_4bit: false

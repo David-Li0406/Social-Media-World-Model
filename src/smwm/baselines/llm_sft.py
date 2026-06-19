@@ -27,6 +27,7 @@ from json.decoder import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
+from ._llm_parse import parse_prediction
 from .base import Baseline
 from .registry import register
 
@@ -380,31 +381,21 @@ class LLMSFTBaseline(Baseline):
             self._model = base
         self._model.eval()
 
-    def _generate_json(self, prompt: str) -> tuple[dict | None, str]:
+    def _generate_raw(self, prompt: str) -> str:
         import torch
 
         self._load()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-
         messages = [{"role": "user", "content": prompt}]
         text = self._tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
+            messages, tokenize=False, add_generation_prompt=True,
             enable_thinking=self.enable_thinking,
         )
         inputs = self._tokenizer([text], return_tensors="pt").to(self._model.device)
-        raw = ""
-        for _ in range(self.retries):
-            gen = self._model.generate(**inputs, max_new_tokens=self.max_new_tokens)
-            out_ids = gen[0][len(inputs.input_ids[0]):].tolist()
-            raw = self._tokenizer.decode(out_ids, skip_special_tokens=True).strip()
-            try:
-                return json.loads(raw), raw
-            except JSONDecodeError:
-                continue
-        return None, raw
+        gen = self._model.generate(**inputs, max_new_tokens=self.max_new_tokens)
+        out_ids = gen[0][len(inputs.input_ids[0]):].tolist()
+        return self._tokenizer.decode(out_ids, skip_special_tokens=True).strip()
 
     def predict(self, record: dict) -> dict:
         prompt = record.get("prompt")
@@ -413,16 +404,8 @@ class LLMSFTBaseline(Baseline):
             from .base import get_context, get_stimulus
 
             prompt = make_prompt(get_context(record), get_stimulus(record))
-        parsed, raw = self._generate_json(prompt)
-        if parsed is None:
-            # Lenient fallback: SFT models sometimes emit slightly malformed
-            # JSON (e.g. a stray quote before the closing brace) that breaks
-            # json.loads. The numeric fields are still recoverable by regex.
-            parsed = _regex_extract(raw)
-        return {
-            "score": int(parsed.get("score", 0) or 0),
-            "width": int(parsed.get("width", 0) or 0),
-            "controversiality": int(parsed.get("controversiality", 0) or 0),
-            "reply_summary": str(parsed.get("reply_summary", "") or ""),
-            "_raw": raw,
-        }
+        raw = self._generate_raw(prompt)
+        # Shared parser: strict JSON, else regex recovery of numeric fields.
+        pred = parse_prediction(raw)
+        pred["_raw"] = raw
+        return pred

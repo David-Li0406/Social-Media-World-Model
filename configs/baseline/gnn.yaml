@@ -1,0 +1,7 @@
+baseline: gnn
+params:
+  max_nodes: 12
+  hidden: 64
+  layers: 2
+  epochs: 20
+  device: cpu
