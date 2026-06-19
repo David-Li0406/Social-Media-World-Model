@@ -148,7 +148,12 @@ class LLMRegressionHead(Baseline):
 
         params = [p for p in self._model.parameters() if p.requires_grad]
         opt = AdamW(params, lr=self.lr)
-        huber = torch.nn.SmoothL1Loss(); ce = torch.nn.CrossEntropyLoss()
+        huber = torch.nn.SmoothL1Loss()
+        # Class-weighted CE: controversiality is ~2.4% positive, so an
+        # unweighted head collapses to always-negative (F1 ~ majority floor).
+        pos = float((yc == 1).sum()); neg = float((yc == 0).sum())
+        w = torch.tensor([1.0, neg / max(pos, 1.0)], dtype=torch.float32, device=self.device)
+        ce = torch.nn.CrossEntropyLoss(weight=w)
         n = len(usable); self._model.train()
         step = 0
         for ep in range(self.epochs):

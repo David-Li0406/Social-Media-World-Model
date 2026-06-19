@@ -320,5 +320,28 @@
       "pos_rate_true": 0.024210526315789474,
       "pos_rate_pred": 0.00631578947368421
     }
+  },
+  "llm_reghead_qwen3_4b": {
+    "n": 1900,
+    "skipped": 0,
+    "score": {
+      "mse": 2017642.8442105262,
+      "mae": 376.9821052631579,
+      "spearman_rho": 0.7312298373322598,
+      "spearman_p": 1.201544e-317,
+      "pairwise_accuracy": 0.748956512009295
+    },
+    "width": {
+      "mse": 167.16052631578947,
+      "mae": 4.177368421052631,
+      "spearman_rho": 0.6634041225464606,
+      "spearman_p": 2.476266856728169e-241,
+      "pairwise_accuracy": 0.6786055428927668
+    },
+    "controversiality": {
+      "f1_macro": 0.4938732019179542,
+      "pos_rate_true": 0.024210526315789474,
+      "pos_rate_pred": 0.0
+    }
   }
 }

@@ -33,7 +33,8 @@ full 1898 vs the earlier biased 801-skip subset).
 | glm_poisson | +0.640 | 0.722 | +0.568 | 0.676 | 0.424 |
 | hawkes | +0.641 | 0.718 | +0.578 | 0.636 | 0.398 |
 | encoder_distilbert | +0.720 | 0.761 | +0.642 | 0.699 | 0.494 |
-| llm_sft Qwen3-4B (LoRA) | +0.724 | 0.742 | +0.541 | 0.547 | 0.545 |
+| llm_sft Qwen3-4B (LoRA, JSON gen) | +0.724 | 0.742 | +0.541 | 0.547 | 0.545 |
+| llm_reghead Qwen3-4B (LoRA + heads) | +0.731 | 0.749 | +0.663 | 0.679 | 0.494* |
 | gnn (reply-tree) | +0.745 | 0.762 | +0.676 | 0.668 | 0.494 |
 | structural_prior (graph-only) | +0.750 | 0.762 | +0.670 | 0.702 | 0.415 |
 | feature_gbdt | +0.759 | 0.770 | +0.676 | 0.711 | 0.424 |
@@ -52,6 +53,14 @@ full 1898 vs the earlier biased 801-skip subset).
   above zero-shot Qwen3-4B (0.374) and 32B (0.482), and best-but-one on F1
   (0.545), yet a sub-second `quantile_gbm` still edges it on every ranking
   metric at a fraction of the cost.
+- **A regression head beats JSON generation.** `llm_reghead` (Qwen3-4B + numeric
+  heads, no text decoding) lifts the SFT model from 0.724→**0.731** on score
+  and **0.541→0.663** on width, with lower MAE and **0% parse failures** (vs the
+  81% malformed-JSON rate the SFT generator hit). This confirms the proposed
+  "predict numbers directly" recipe is the right way to make an LLM a numeric
+  world model. *(F1 0.494 marked `*`: its controversiality head collapsed to
+  the majority class under unweighted CE on the 2.4%-positive label; fixed with
+  class-weighted CE for future runs.)*
 - **Count GLMs / Hawkes** (0.61–0.64) are solid principled baselines; the
   self-exciting `hawkes` is competitive on width (cascade size), as expected.
 
