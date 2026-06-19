@@ -26,10 +26,12 @@ TRAIN = "train_test/RC_2025-12_politics_width_chain01_train.jsonl"
 POLITICS_TEST = "train_test/RC_2025-12_politics_width_chain01_test.jsonl"
 DOM = "data_analysis/domains"
 
-# Fast models for the full sweep (refit cheaply). Heavier ones (frozen_mlp)
-# are fit once for cross-domain/temporal but skipped in data-scaling.
+# Fast models for the full sweep. These predict instantly per record (no
+# neural per-record encoding), so the 8-test-set x 5-scale sweep is tractable.
+# frozen_mlp / encoder / LLM are excluded from the sweep (per-record encoding /
+# GPU cost) and reported only in the main politics table.
 FAST = ["structural_prior", "hawkes", "glm_poisson", "quantile_gbm", "feature_gbdt", "gnn"]
-FITONCE = FAST + ["frozen_mlp"]
+FITONCE = FAST
 
 CROSS_DOMAIN = [
     ("politics_2025-09", f"{DOM}/politics_2025-09_test.jsonl"),
