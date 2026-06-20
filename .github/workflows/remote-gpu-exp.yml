@@ -18,11 +18,11 @@ on:
         required: true
         default: "v1"
       mode:
-        description: "train (fit adapter) or infer (predict with trained adapter)"
+        description: "train, infer, or judge (LLM-as-judge over summaries)"
         required: true
         default: "train"
         type: choice
-        options: ["train", "infer"]
+        options: ["train", "infer", "judge"]
 
 jobs:
   run:
@@ -111,3 +111,5 @@ jobs:
             runs/${{ inputs.run_name }}/metrics.json
             runs/${{ inputs.run_name }}/config.yaml
             runs/${{ inputs.run_name }}/predictions.jsonl
+            runs/${{ inputs.run_name }}/judge_summary.json
+            runs/${{ inputs.run_name }}/judge_ratings.jsonl

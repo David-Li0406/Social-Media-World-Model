@@ -43,7 +43,18 @@ if [[ "$CONFIG" == *"_debug"* ]]; then
   echo "[gpu_run] debug mode -> $TRAIN_JSONL / $TEST_JSONL"
 fi
 
-if [[ "$MODE" == "infer" ]]; then
+if [[ "$MODE" == "judge" ]]; then
+  # LLM-as-a-judge over predicted reply_summaries. JUDGE_RESULTS = space-
+  # separated result files (committed *_judge.jsonl); JUDGE_MODEL / JUDGE_SAMPLE
+  # optional. Outputs runs/<run_name>/judge_summary.json (+ ratings).
+  echo "[gpu_run] MODE=judge -> rating summaries with ${JUDGE_MODEL:-Qwen/Qwen3-32B}"
+  uv run python scripts/judge_summaries.py \
+    --results ${JUDGE_RESULTS:-results/Qwen_Qwen3-4B_judge.jsonl results/Qwen_Qwen3-32B_judge.jsonl results/llm_sft_qwen3_4b_judge.jsonl} \
+    --judge "${JUDGE_MODEL:-Qwen/Qwen3-32B}" \
+    --sample "${JUDGE_SAMPLE:-200}" \
+    --out "$OUT_DIR" \
+    2>&1 | tee "$OUT_DIR/train.log"
+elif [[ "$MODE" == "infer" ]]; then
   # run_inference calls baseline.fit() first, but llm_sft skips training when
   # the adapter already exists (skip_train_if_adapter_exists), so this just
   # loads the adapter and predicts on the test set.
