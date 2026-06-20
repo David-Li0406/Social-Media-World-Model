@@ -150,6 +150,44 @@ fixed politics test set.
 
 ---
 
+## 6. Reply-summary quality (LLM-as-a-judge, Qwen3-32B)
+
+The fourth target, `reply_summary`, is free text and was previously unscored.
+**Qwen3-32B** (4-bit, on the runner) rates each model's predicted summary
+against the gold reference summary (Qwen3-4B's summary of the *actual* replies)
+on a **1–5** scale (5 = captures all key points + sentiment; 1 = unrelated).
+All models judged on the **same 200 records** (sampled from 1840 commonly
+usable), so means are comparable. Predicted summaries were first recovered from
+`raw_output` for the JSON-broken rows (coverage 1852 / 1883 / 1900).
+
+| Model | mean rating | rating distribution (1/2/3/4/5) |
+|---|---:|---|
+| Qwen3-4B zero-shot | **2.12** | 11 / 156 / 32 / 0 / 1 |
+| Qwen3-32B zero-shot | 2.07 | 13 / 161 / 26 / 0 / 0 |
+| llm_sft Qwen3-4B | 1.95 | 33 / 148 / 16 / 3 / 0 |
+
+**Findings**
+- **Summary forecasting is hard and unsolved.** All models score ~2/5 ("largely
+  misses the points") — predicting the *content and sentiment of unseen future
+  replies* (not just summarizing given text) is a genuinely difficult task. The
+  judge discriminates well (reasons cite specific missed/irrelevant points; it
+  awards 1s, 3s, and the occasional 4–5), so the low mean is real, not a default.
+- **Fine-tuning HURT the summary** (SFT 1.95 < zero-shot 4B 2.12) and produced
+  the most "unrelated" 1s (33 vs 11). LoRA-SFT optimized the numeric fields and
+  JSON format, degrading free-text quality — a concrete trade-off: the SFT model
+  that wins on numeric ranking (§1) is the worst summarizer.
+- **Scale doesn't help** the summary either (32B ≈ 4B zero-shot).
+- **Implication for the world model**: it is strong on the *numeric* engagement
+  signals (ρ≈0.76) but the qualitative reply-content channel is not yet usable;
+  this argues for either a dedicated summary head/decoder or treating
+  reply_summary as a separate, harder sub-problem.
+
+Reproduce: `scripts/judge_summaries.py` (run via the `judge` workflow mode);
+raw ratings in `results/judge_ratings.jsonl`, aggregate in
+`results/judge_summary.json`.
+
+---
+
 ## 5. Takeaways for the world-model claim
 
 1. **It is a world model, not a politics-memorizer**: ≤0.09 ρ drop across five

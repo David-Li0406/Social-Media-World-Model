@@ -1,0 +1,35 @@
+{
+  "judge": "Qwen/Qwen3-32B",
+  "sample": 200,
+  "models": {
+    "Qwen_Qwen3-4B_judge": {
+      "n": 200,
+      "mean_rating": 2.12,
+      "distribution": {
+        "1": 11,
+        "2": 156,
+        "3": 32,
+        "5": 1
+      }
+    },
+    "Qwen_Qwen3-32B_judge": {
+      "n": 200,
+      "mean_rating": 2.065,
+      "distribution": {
+        "1": 13,
+        "2": 161,
+        "3": 26
+      }
+    },
+    "llm_sft_qwen3_4b_judge": {
+      "n": 200,
+      "mean_rating": 1.945,
+      "distribution": {
+        "1": 33,
+        "2": 148,
+        "3": 16,
+        "4": 3
+      }
+    }
+  }
+}
