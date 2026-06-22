@@ -142,42 +142,13 @@ s = slide()
 header(s, "2 · Generalization: is it a world model?",
        "Trains on politics, transfers across domains & time; keeps improving with data")
 
-tf = box(s, 0.45, 1.3, 4.2, 0.4)
-setline(tf.paragraphs[0], "Cross-domain (score ρ, train=politics)", size=13, bold=True, color=NAVY)
-cd = [
-    ["test domain", "qgbm", "gnn"],
-    ["politics (in-dom)", "0.760", "0.746"],
-    ["technology", "0.737", "0.752"],
-    ["news", "0.723", "0.736"],
-    ["worldnews", "0.685", "0.695"],
-    ["Conservative", "0.670", "0.685"],
-]
-add_table(s, cd, 0.45, 1.75, 4.2, 3.0, col_w=[2.2, 1.0, 1.0], font=11)
+# three figures (cross-domain / temporal / data-scaling) rendered by make_figures.py
+fig_w = 4.28
+for j, png in enumerate(["cross_domain.png", "temporal.png", "data_scaling.png"]):
+    s.shapes.add_picture("slides/figures/" + png, Inches(0.18 + j * (fig_w + 0.05)),
+                         Inches(1.35), width=Inches(fig_w))
 
-tf = box(s, 4.95, 1.3, 4.0, 0.4)
-setline(tf.paragraphs[0], "Temporal (politics, score ρ)", size=13, bold=True, color=NAVY)
-tp = [
-    ["train→test gap", "qgbm", "feat"],
-    ["in-domain (0)", "0.760", "0.759"],
-    ["−3 months", "0.745", "0.750"],
-    ["−10 months", "0.738", "0.741"],
-    ["−16 months", "0.731", "0.736"],
-]
-add_table(s, tp, 4.95, 1.75, 4.0, 2.5, col_w=[2.0, 1.0, 1.0], font=11)
-
-tf = box(s, 9.25, 1.3, 3.8, 0.4)
-setline(tf.paragraphs[0], "Data-scaling (score ρ)", size=13, bold=True, color=NAVY)
-ds = [
-    ["train n", "qgbm", "gnn"],
-    ["500", "0.698", "0.710"],
-    ["1,000", "0.723", "0.737"],
-    ["2,000", "0.731", "0.739"],
-    ["4,000", "0.743", "0.740"],
-    ["7,596", "0.760", "0.742"],
-]
-add_table(s, ds, 9.25, 1.75, 3.8, 3.0, col_w=[1.7, 1.0, 1.0], font=11)
-
-tf = box(s, 0.45, 5.05, 12.6, 2.2)
+tf = box(s, 0.45, 5.15, 12.6, 2.2)
 setline(tf.paragraphs[0], "Takeaways", size=16, bold=True, color=NAVY, space=6)
 for head, body in [
     ("Cross-domain: ", "graceful — only ≈0.02–0.09 ρ drop to 4 unseen subreddits; structural/GNN transfer best."),

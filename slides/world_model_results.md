@@ -35,15 +35,9 @@
 ## 2 · Generalization: is it a world model?
 *Trains on politics, transfers across domains & time; keeps improving with data*
 
-**Cross-domain** (score ρ, train = politics) | **Temporal** (politics) | **Data-scaling** (score ρ)
-
-| test domain | qgbm | gnn |   | gap | qgbm | feat |   | train n | qgbm | gnn |
-|---|---:|---:|---|---|---:|---:|---|---|---:|---:|
-| politics (in-dom) | 0.760 | 0.746 |   | 0 mo | 0.760 | 0.759 |   | 500 | 0.698 | 0.710 |
-| technology | 0.737 | 0.752 |   | −3 mo | 0.745 | 0.750 |   | 1,000 | 0.723 | 0.737 |
-| news | 0.723 | 0.736 |   | −10 mo | 0.738 | 0.741 |   | 2,000 | 0.731 | 0.739 |
-| worldnews | 0.685 | 0.695 |   | −16 mo | 0.731 | 0.736 |   | 4,000 | 0.743 | 0.740 |
-| Conservative | 0.670 | 0.685 |   |  |  |  |   | 7,596 | 0.760 | 0.742 |
+| Cross-domain transfer | Temporal stability | Data-scaling law |
+|:---:|:---:|:---:|
+| ![cross-domain](figures/cross_domain.png) | ![temporal](figures/temporal.png) | ![data-scaling](figures/data_scaling.png) |
 
 **Takeaways**
 - **Cross-domain**: graceful — only ≈0.02–0.09 ρ drop to 4 unseen subreddits; structural/GNN transfer best.
