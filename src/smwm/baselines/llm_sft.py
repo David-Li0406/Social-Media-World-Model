@@ -279,9 +279,22 @@ class LLMSFTBaseline(Baseline):
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
 
+        # Records may be stored lean (no prompt/completion) to keep files small;
+        # both are deterministic functions of context/stimulus/ground_truth, so
+        # rebuild them rather than silently dropping the record. Previously this
+        # loop skipped every lean record and then raised "no usable training
+        # records" on a perfectly valid dataset.
+        from ..data.build_splits import make_prompt, make_target
+        from .base import get_context, get_ground_truth, get_stimulus
+
         texts: list[str] = []
         for r in train_records:
             p, c = r.get("prompt"), r.get("completion")
+            if p is None:
+                p = make_prompt(get_context(r), get_stimulus(r))
+            if c is None:
+                gt = get_ground_truth(r)
+                c = make_target(gt) if gt else None
             if p is None or c is None:
                 continue
             texts.append(p + "\n" + c + tokenizer.eos_token)

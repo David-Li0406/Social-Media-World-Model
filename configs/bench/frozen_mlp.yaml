@@ -1,2 +1,3 @@
 baseline: frozen_mlp
-params: {model_id: sentence-transformers/all-MiniLM-L6-v2, hidden: 256}
+params: {model_id: sentence-transformers/all-MiniLM-L6-v2, device: cuda,
+         hidden: [256, 64], max_iter: 300, batch_size: 256}

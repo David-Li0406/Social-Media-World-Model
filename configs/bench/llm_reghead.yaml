@@ -1,4 +1,5 @@
-# 1 epoch: measured 8.4 samples/s, so 50k train ~= 99 min on one GPU.
+# batch_size 4 (not 8): with eager attention the B x heads x L x L tensor at
+# 8 x 1024 OOM'd a 95GB H20. grad_accum 4 keeps the effective batch at 16.
 baseline: llm_reghead
-params: {model_id: Qwen/Qwen3-4B, max_length: 1024, epochs: 1, batch_size: 8,
-         grad_accum: 2, lr: 1.0e-4, bf16: true, gpus: "0"}
+params: {model_id: Qwen/Qwen3-4B, max_length: 1024, epochs: 1, batch_size: 4,
+         grad_accum: 4, lr: 1.0e-4, bf16: true, gpus: "0"}
