@@ -22,16 +22,16 @@ def mae(preds: Sequence[float], truths: Sequence[float]) -> float:
 
 
 def f1_binary_macro(preds: Sequence[int], truths: Sequence[int]) -> float:
-    tp = fp = fn = tn = 0
-    for p, t in zip(preds, truths):
-        if p == 1 and t == 1:
-            tp += 1
-        elif p == 1 and t == 0:
-            fp += 1
-        elif p == 0 and t == 1:
-            fn += 1
-        else:
-            tn += 1
+    # Vectorized: the bootstrap calls this thousands of times on 60k-element
+    # vectors, where the original Python loop cost minutes. Counts (and hence
+    # the returned value) are identical.
+    p = np.asarray(preds)
+    t = np.asarray(truths)
+    pe1, te1 = (p == 1), (t == 1)
+    tp = int(np.count_nonzero(pe1 & te1))
+    fp = int(np.count_nonzero(pe1 & ~te1))
+    fn = int(np.count_nonzero(~pe1 & te1))
+    tn = int(len(p) - tp - fp - fn)
 
     def _f1(tp, fp, fn):
         prec = tp / (tp + fp) if (tp + fp) else 0.0

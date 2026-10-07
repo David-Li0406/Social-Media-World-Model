@@ -13,6 +13,9 @@ dist/
 # GH Actions / GPU runner artifacts (per project CLAUDE.md):
 runs/
 downloaded_runs/
+# Multi-year corpus built by scripts/build_multiyear.py (~800MB of JSONL).
+# Regenerate with: PYTHONPATH=src python3 scripts/build_multiyear.py
+data_multiyear/
 wandb/
 *.pt
 *.pth

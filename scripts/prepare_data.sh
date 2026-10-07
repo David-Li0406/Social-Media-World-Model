@@ -21,9 +21,15 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # The committed train/test JSONL files (~42 MB total) are the source of truth.
 # We just copy them into DATA_ROOT so DeepSpeed / training scripts can point at
 # a stable location independent of the workspace.
+# summary_subset.jsonl is the reply_summary task subset (11,557 records with
+# their recovered reply texts). It is committed because Machine B cannot reach
+# the SOL /scratch filesystem where the corpus is built.
 for f in \
   "train_test/RC_2025-12_politics_width_chain01_train.jsonl" \
-  "train_test/RC_2025-12_politics_width_chain01_test.jsonl"
+  "train_test/RC_2025-12_politics_width_chain01_test.jsonl" \
+  "train_test/summary_subset.jsonl" \
+  "train_test/bench_temporal_train.jsonl.gz" \
+  "train_test/bench_temporal_eval.jsonl.gz"
 do
   src="$REPO_ROOT/$f"
   if [ ! -f "$src" ]; then
@@ -32,7 +38,11 @@ do
   fi
   dst="$DATA_ROOT/$(basename "$f")"
   cp -u "$src" "$dst"
-  echo "[prepare_data] $(basename "$f"): $(wc -l <"$dst") lines"
+  if [[ "$dst" == *.gz ]]; then
+    echo "[prepare_data] $(basename "$f"): $(gzip -cd "$dst" | wc -l) lines (gz)"
+  else
+    echo "[prepare_data] $(basename "$f"): $(wc -l <"$dst") lines"
+  fi
 done
 
 # A small debug subset for fast smoke-test training (first 200 records).

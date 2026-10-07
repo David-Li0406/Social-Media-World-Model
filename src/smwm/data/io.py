@@ -1,14 +1,23 @@
 """Shared I/O helpers and record-shape utilities."""
 from __future__ import annotations
 
+import gzip
 import json
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
 
+def _open_text(path: str | Path, mode: str = "r"):
+    """Transparently handle .gz, so callers never special-case compression."""
+    path = Path(path)
+    if str(path).endswith(".gz"):
+        return gzip.open(path, mode + "t", encoding="utf-8")
+    return open(path, mode, encoding="utf-8")
+
+
 def read_jsonl(path: str | Path) -> list[dict]:
     out: list[dict] = []
-    with open(path, "r", encoding="utf-8") as f:
+    with _open_text(path) as f:
         for line in f:
             line = line.strip()
             if line:
@@ -17,7 +26,7 @@ def read_jsonl(path: str | Path) -> list[dict]:
 
 
 def iter_jsonl(path: str | Path) -> Iterator[dict]:
-    with open(path, "r", encoding="utf-8") as f:
+    with _open_text(path) as f:
         for line in f:
             line = line.strip()
             if line:

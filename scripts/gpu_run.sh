@@ -15,6 +15,8 @@ DATA_ROOT="${DATA_ROOT:-$HOME/datasets/smwm}"
 MODE="${MODE:-train}"
 
 # GPUs 4-7 on Machine B (per user directive). torch/peft honour CUDA_VISIBLE_DEVICES.
+# NOTE: CLAUDE.md still says GPUs 2,3; 4-7 is the current directive and what the
+# workflow exports.
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-4,5,6,7}"
 export TOKENIZERS_PARALLELISM=false
 # Where large artifacts (LoRA adapter, checkpoints) live on Machine B.
@@ -43,7 +45,25 @@ if [[ "$CONFIG" == *"_debug"* ]]; then
   echo "[gpu_run] debug mode -> $TRAIN_JSONL / $TEST_JSONL"
 fi
 
-if [[ "$MODE" == "judge" ]]; then
+if [[ "$MODE" == "benchmark" ]]; then
+  # Fan the GPU baselines across all four GPUs in this single job.
+  echo "[gpu_run] MODE=benchmark -> sharding across GPUs 4-7"
+  RUN_NAME="$RUN_NAME" DATA_ROOT="$DATA_ROOT" ./scripts/gpu_benchmark.sh \
+    2>&1 | tee "$OUT_DIR/train.log"
+elif [[ "$MODE" == "summarize" ]]; then
+  # Phase B of the reply_summary target: generate summaries for the subset
+  # whose real reply texts were recovered on Machine A. Resumable, so a
+  # re-dispatch continues rather than restarting.
+  SUB="${SUMMARY_INPUT:-$DATA_ROOT/summary_subset.jsonl}"
+  echo "[gpu_run] MODE=summarize -> $SUB"
+  uv run python scripts/summarize_subset.py \
+    --input "$SUB" \
+    --output "$OUT_DIR/summaries.jsonl" \
+    --model "${SUMMARY_MODEL:-Qwen/Qwen3-4B}" \
+    --batch-size "${SUMMARY_BATCH:-8}" \
+    ${SUMMARY_LIMIT:+--limit $SUMMARY_LIMIT} \
+    2>&1 | tee "$OUT_DIR/train.log"
+elif [[ "$MODE" == "judge" ]]; then
   # LLM-as-a-judge over predicted reply_summaries. JUDGE_RESULTS = space-
   # separated result files (committed *_judge.jsonl); JUDGE_MODEL / JUDGE_SAMPLE
   # optional. Outputs runs/<run_name>/judge_summary.json (+ ratings).

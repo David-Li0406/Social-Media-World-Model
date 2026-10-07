@@ -1,0 +1,2 @@
+baseline: llm
+params: {model_id: Qwen/Qwen3-4B, max_new_tokens: 160, load_in_4bit: false}

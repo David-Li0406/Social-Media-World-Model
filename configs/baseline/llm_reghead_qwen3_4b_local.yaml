@@ -1,0 +1,18 @@
+# llm_reghead on the local single-GPU box (A100-80GB), as opposed to the
+# 4-GPU Machine B runner. Identical hyperparameters to
+# llm_reghead_qwen3_4b.yaml -- only the device list differs -- so the re-run
+# isolates the class-weighted-CE fix for the controversiality head.
+#
+# bitsandbytes is unusable here (host GLIBC predates the shipped .so), so this
+# path must stay bf16; no 4-bit.
+baseline: llm_reghead
+params:
+  model_id: Qwen/Qwen3-4B
+  max_length: 1024
+  epochs: 2
+  batch_size: 4
+  grad_accum: 4
+  lr: 1.0e-4
+  freeze_backbone: false
+  bf16: true
+  gpus: "0"

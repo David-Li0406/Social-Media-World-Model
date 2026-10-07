@@ -18,11 +18,11 @@ on:
         required: true
         default: "v1"
       mode:
-        description: "train, infer, or judge (LLM-as-judge over summaries)"
+        description: "train, infer, judge, summarize, or benchmark (all 4 GPUs)"
         required: true
         default: "train"
         type: choice
-        options: ["train", "infer", "judge"]
+        options: ["train", "infer", "judge", "summarize", "benchmark"]
 
 jobs:
   run:
@@ -113,3 +113,7 @@ jobs:
             runs/${{ inputs.run_name }}/predictions.jsonl
             runs/${{ inputs.run_name }}/judge_summary.json
             runs/${{ inputs.run_name }}/judge_ratings.jsonl
+            runs/${{ inputs.run_name }}/summaries.jsonl
+            runs/${{ inputs.run_name }}/metrics.txt
+            runs/${{ inputs.run_name }}/*.log
+            runs/${{ inputs.run_name }}/*.jsonl

@@ -1,0 +1,7 @@
+# llm_sft trains at 2.26 samples/s (generation-style SFT), the slowest row, so
+# its train cap is applied separately via --train-limit in the shard script.
+baseline: llm_sft
+params: {model_id: Qwen/Qwen3-4B, run_name: bench_sft_qwen3_4b, epochs: 1,
+         micro_train_batch_size: 1, train_batch_size: 8, backend: peft,
+         gpus: "0", bf16: true, max_new_tokens: 160, load_in_4bit: false,
+         skip_train_if_adapter_exists: true}

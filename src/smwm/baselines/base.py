@@ -18,6 +18,14 @@ class Baseline(ABC):
     def predict(self, record: dict) -> dict:
         """Return a dict with keys score, controversiality, width, reply_summary."""
 
+    def predict_batch(self, records: list[dict]) -> list[dict]:
+        """Predict a chunk at once. Default loops; override where it pays.
+
+        It pays a lot for two families: generation LLMs, where batching is the
+        difference between 4.7 s and ~0.6 s per record, and the sklearn/LightGBM
+        baselines, whose per-call overhead dominates their actual work."""
+        return [self.predict(r) for r in records]
+
 
 def get_context(record: dict) -> list[dict]:
     """Recover the conversation context, preferring structured field over prompt."""

@@ -1,0 +1,4 @@
+# 1 epoch: measured 8.4 samples/s, so 50k train ~= 99 min on one GPU.
+baseline: llm_reghead
+params: {model_id: Qwen/Qwen3-4B, max_length: 1024, epochs: 1, batch_size: 8,
+         grad_accum: 2, lr: 1.0e-4, bf16: true, gpus: "0"}

@@ -49,6 +49,44 @@ class LLMBaseline(Baseline):
     def fit(self, train_records: list[dict]) -> None:
         return None
 
+    def predict_batch(self, records: list[dict]) -> list[dict]:
+        """Generate for a whole chunk in one forward pass.
+
+        Decoder-only generation needs LEFT padding, otherwise the pads sit
+        between the prompt and the first generated token and the model
+        continues from padding instead of from the prompt.
+        """
+        import torch
+
+        self._load()
+        tok = self._tokenizer
+        if tok.pad_token is None:
+            tok.pad_token = tok.eos_token
+        prev_side = tok.padding_side
+        tok.padding_side = "left"
+        try:
+            texts = [
+                tok.apply_chat_template(self.build_messages(r), tokenize=False,
+                                        add_generation_prompt=True,
+                                        enable_thinking=self.enable_thinking)
+                for r in records
+            ]
+            enc = tok(texts, return_tensors="pt", padding=True, truncation=True,
+                      max_length=getattr(self, "max_length", 3072)).to(self._model.device)
+            with torch.no_grad():
+                gen = self._model.generate(**enc, max_new_tokens=self.max_new_tokens,
+                                           pad_token_id=tok.pad_token_id)
+            out = []
+            for row in gen:
+                raw = tok.decode(row[enc.input_ids.shape[1]:],
+                                 skip_special_tokens=True).strip()
+                pred = parse_prediction(raw)
+                pred["_raw"] = raw
+                out.append(pred)
+            return out
+        finally:
+            tok.padding_side = prev_side
+
     # ---- prompt strategy (overridden by subclasses) ----
     def build_messages(self, record: dict) -> list[dict]:
         return [{"role": "user", "content": _record_prompt(record)}]

@@ -46,6 +46,11 @@ class LLMRegressionHead(Baseline):
         device: str | None = None,
         gpus: str = "4,5,6,7",
         bf16: bool = True,
+        # "batch"      -> weighted CE summed and divided by batch size (correct
+        #                 magnitude for a rare positive class)
+        # "weight_sum" -> torch's reduction="mean", kept to reproduce the
+        #                 earlier runs
+        contr_loss_norm: str = "batch",
         **kwargs,
     ):
         self.model_id = model_id
@@ -62,6 +67,9 @@ class LLMRegressionHead(Baseline):
         self.device = device
         self.gpus = gpus
         self.bf16 = bool(bf16)
+        if contr_loss_norm not in ("batch", "weight_sum"):
+            raise ValueError(f"contr_loss_norm must be batch|weight_sum, got {contr_loss_norm!r}")
+        self.contr_loss_norm = contr_loss_norm
         self._tok = None
         self._model: Any = None
 
@@ -153,7 +161,20 @@ class LLMRegressionHead(Baseline):
         # unweighted head collapses to always-negative (F1 ~ majority floor).
         pos = float((yc == 1).sum()); neg = float((yc == 0).sum())
         w = torch.tensor([1.0, neg / max(pos, 1.0)], dtype=torch.float32, device=self.device)
-        ce = torch.nn.CrossEntropyLoss(weight=w)
+        # NOTE: reduction="mean" would divide by the SUM OF WEIGHTS, not by the
+        # batch size, which normalizes most of the up-weighting straight back
+        # out: at batch_size=4 with a ~2.4% positive rate, a batch holding one
+        # positive returns ~3.7 instead of ~40, an ~11x dilution. Summing and
+        # dividing by the batch size keeps the intended weight magnitude while
+        # leaving the CE term the same order as the two Huber terms
+        # (E[weight x rate] ~ 40 x 0.024 ~ 1).
+        if self.contr_loss_norm == "batch":
+            _ce_sum = torch.nn.CrossEntropyLoss(weight=w, reduction="sum")
+
+            def ce(logits, target):
+                return _ce_sum(logits, target) / max(len(target), 1)
+        else:
+            ce = torch.nn.CrossEntropyLoss(weight=w)
         n = len(usable); self._model.train()
         step = 0
         for ep in range(self.epochs):

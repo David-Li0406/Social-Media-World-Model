@@ -1,6 +1,7 @@
 """Registers all baselines on import. Heavy deps (torch, transformers,
 sentence-transformers, lightgbm) are loaded lazily inside the baselines."""
 from . import (  # noqa: F401
+    ablation,
     constant,
     encoder,
     feature,
