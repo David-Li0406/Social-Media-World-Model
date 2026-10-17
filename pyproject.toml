@@ -35,6 +35,9 @@ llm_sft = [
 # which require a CUDA toolchain to build from source.
 llm_sft_openrlhf = ["openrlhf", "deepspeed"]
 data = ["pyarrow"]
+# vLLM accelerates the 32B judge (continuous batching + paged KV).
+# Optional: judge_reply_predictions.py falls back to transformers if absent.
+vllm = ["vllm"]
 
 [project.scripts]
 smwm-data = "smwm.cli.run_data:main"

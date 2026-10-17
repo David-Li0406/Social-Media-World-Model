@@ -90,7 +90,9 @@ for i in "${!GPUS[@]}"; do
       --predictions "$OUT_DIR/predictions.jsonl" \
       --output "$OUT_DIR/ratings_$i.jsonl" \
       --judge "$JUDGE_MODEL" --batch-size "$JUDGE_BS" \
-      --shard "$i" --num-shards 4 --load-in-4bit \
+      --shard "$i" --num-shards 4 \
+      --engine "${JUDGE_ENGINE:-auto}" --gpu-mem-util "${JUDGE_GPU_UTIL:-0.90}" \
+      --load-in-4bit \
       > "$OUT_DIR/judge_$i.log" 2>&1
     echo "[judge $i] exit=$? $(date +%T)" ) &
 done

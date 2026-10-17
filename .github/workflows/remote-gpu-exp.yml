@@ -65,6 +65,19 @@ jobs:
           # old"; cu121 is forward-compatible with 12.2.
           uv sync --python 3.12 --extra llm_sft --extra retrieval
 
+      - name: Install vLLM (optional accelerator)
+        continue-on-error: true
+        run: |
+          # Installed in its own non-fatal step rather than folded into the main
+          # sync: vLLM pins torch tightly, and a resolution failure here must not
+          # take down the whole job. judge_reply_predictions.py falls back to
+          # transformers when vLLM is not importable.
+          export UV_CACHE_DIR="$HOME/.cache/uv"
+          uv pip install vllm || echo "[vllm] install failed; judge will use transformers"
+          uv run python -c "import vllm, torch; print('vllm', vllm.__version__, 'torch', torch.__version__)" \
+            || echo "[vllm] not importable"
+          uv run python -c "import torch; assert torch.cuda.is_available(); print('torch CUDA still OK')"
+
       - name: Prepare data
         run: |
           export DATA_ROOT="$HOME/datasets/smwm"
