@@ -65,18 +65,41 @@ jobs:
           # old"; cu121 is forward-compatible with 12.2.
           uv sync --python 3.12 --extra llm_sft --extra retrieval
 
-      - name: Install vLLM (optional accelerator)
+      - name: Install vLLM (optional accelerator, with rollback)
         continue-on-error: true
         run: |
-          # Installed in its own non-fatal step rather than folded into the main
-          # sync: vLLM pins torch tightly, and a resolution failure here must not
-          # take down the whole job. judge_reply_predictions.py falls back to
-          # transformers when vLLM is not importable.
+          # The runner's driver is CUDA 12.2, which is why pyproject pins torch
+          # to the cu124 index. A bare `uv pip install vllm` drags in a torch
+          # built for a newer driver, and torch.cuda.is_available() goes false
+          # -- which silently broke every GPU stage of a previous run.
+          # So: install, verify, and roll back if torch lost CUDA.
           export UV_CACHE_DIR="$HOME/.cache/uv"
-          uv pip install vllm || echo "[vllm] install failed; judge will use transformers"
-          uv run python -c "import vllm, torch; print('vllm', vllm.__version__, 'torch', torch.__version__)" \
-            || echo "[vllm] not importable"
-          uv run python -c "import torch; assert torch.cuda.is_available(); print('torch CUDA still OK')"
+          torch_ok() { uv run python -c "import torch,sys; sys.exit(0 if torch.cuda.is_available() else 1)" 2>/dev/null; }
+          if uv pip install ${VLLM_SPEC:-vllm}; then
+            if torch_ok; then
+              uv run python -c "import vllm,torch; print('[vllm] ok', vllm.__version__, 'torch', torch.__version__)" || true
+            else
+              echo "[vllm] install broke torch CUDA -- rolling back"
+              uv pip uninstall vllm >/dev/null 2>&1 || true
+              uv sync --python 3.12 --extra llm_sft --extra retrieval --reinstall-package torch
+              torch_ok && echo "[vllm] rollback restored torch CUDA" || echo "[vllm] ROLLBACK FAILED"
+            fi
+          else
+            echo "[vllm] install failed; judge will use transformers"
+          fi
+
+      - name: Verify GPU stack (fatal)
+        run: |
+          # Deliberately NOT continue-on-error: if torch cannot see the GPUs,
+          # every lane would fail one by one and the job would still report
+          # success. Fail here instead, at the cheapest possible point.
+          uv run python - <<'EOF'
+          import sys, torch
+          print("torch", torch.__version__, "cuda_available", torch.cuda.is_available())
+          if not torch.cuda.is_available():
+              sys.exit("FATAL: torch cannot see CUDA; aborting before any lane runs")
+          print("visible GPUs:", torch.cuda.device_count())
+          EOF
 
       - name: Prepare data
         run: |

@@ -46,7 +46,15 @@ for i in "${!GPUS[@]}"; do
 done
 wait
 cat "$OUT_DIR"/reference_*.jsonl > "$OUT_DIR/reference_summaries.jsonl" 2>/dev/null
-echo "[sum] references: $(wc -l < "$OUT_DIR/reference_summaries.jsonl") records"
+REF_N=$(wc -l < "$OUT_DIR/reference_summaries.jsonl" 2>/dev/null || echo 0)
+echo "[sum] references: $REF_N records"
+# Stage guards: without these an all-empty pipeline still exits 0 and the
+# workflow reports success, which is exactly what happened on replyforecast-002.
+if [ "$REF_N" -eq 0 ]; then
+  echo "[sum] FATAL: reference stage produced nothing; see reference_*.log" >&2
+  tail -5 "$OUT_DIR"/reference_0.log >&2 2>/dev/null
+  exit 1
+fi
 
 # ---------- stage 2: forecast replies from the comment alone -----------------
 # Evaluate on the held-out side of the subset.
@@ -79,7 +87,13 @@ PYEOF
 done
 wait
 cat "$OUT_DIR"/pred_*.jsonl > "$OUT_DIR/predictions.jsonl" 2>/dev/null
-echo "[sum] predictions: $(wc -l < "$OUT_DIR/predictions.jsonl") records"
+PRED_N=$(wc -l < "$OUT_DIR/predictions.jsonl" 2>/dev/null || echo 0)
+echo "[sum] predictions: $PRED_N records"
+if [ "$PRED_N" -eq 0 ]; then
+  echo "[sum] FATAL: forecast stage produced nothing; see pred_*.log" >&2
+  tail -5 "$OUT_DIR"/pred_0.log >&2 2>/dev/null
+  exit 1
+fi
 
 # ---------- stage 3: judge, dual reference ------------------------------------
 for i in "${!GPUS[@]}"; do
@@ -98,6 +112,12 @@ for i in "${!GPUS[@]}"; do
 done
 wait
 cat "$OUT_DIR"/ratings_*.jsonl > "$OUT_DIR/judge_ratings.jsonl" 2>/dev/null
+JUDGE_N=$(wc -l < "$OUT_DIR/judge_ratings.jsonl" 2>/dev/null || echo 0)
+if [ "$JUDGE_N" -eq 0 ]; then
+  echo "[sum] FATAL: judge stage produced nothing; see judge_*.log" >&2
+  tail -5 "$OUT_DIR"/judge_0.log >&2 2>/dev/null
+  exit 1
+fi
 
 uv run python - "$OUT_DIR/judge_ratings.jsonl" "$OUT_DIR/judge_summary.json" <<'PYEOF'
 import json, sys
