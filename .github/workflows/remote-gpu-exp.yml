@@ -17,6 +17,14 @@ on:
         description: "Dataset version (bump when prepare_data.sh logic changes)"
         required: true
         default: "v1"
+      use_vllm:
+        description: "try vLLM for the judge. OFF by default: vllm 0.31 forces torch 2.13, which this runner's CUDA 12.2 driver cannot load. Needs a pinned, cu124-compatible version."
+        required: false
+        default: "false"
+      vllm_spec:
+        description: "pip spec when use_vllm is true, e.g. 'vllm==0.7.3'"
+        required: false
+        default: "vllm"
       lanes:
         description: "benchmark mode only: space-separated lanes to run (blank = all 7)"
         required: false
@@ -59,13 +67,22 @@ jobs:
       - name: Setup uv environment
         run: |
           export UV_CACHE_DIR="$HOME/.cache/uv"
-          # Pin Python 3.12 (openrlhf wheels). torch is routed to the CUDA 12.1
-          # index in pyproject.toml ([tool.uv.sources]) because the runner's
-          # driver is CUDA 12.2 and the default cu13 wheel reports "driver too
-          # old"; cu121 is forward-compatible with 12.2.
+          # Pin Python 3.12 (openrlhf wheels). torch is routed to the CUDA 12.4
+          # index in pyproject.toml because the runner's driver is CUDA 12.2.
           uv sync --python 3.12 --extra llm_sft --extra retrieval
+          # Self-repair: a previous vLLM experiment can leave torch half-replaced
+          # -- the torch package restored but its nvidia-* CUDA libraries gone,
+          # so `import torch` dies on `from torch._C import *`. A plain sync does
+          # not fix that, because uv considers the resolution already satisfied.
+          if ! uv run python -c "import torch,sys; sys.exit(0 if torch.cuda.is_available() else 1)" 2>/dev/null; then
+            echo "[env] torch/CUDA unusable -- rebuilding the venv from scratch"
+            rm -rf .venv
+            uv sync --python 3.12 --extra llm_sft --extra retrieval
+          fi
+          uv run python -c "import torch; print('[env] torch', torch.__version__, 'cuda', torch.cuda.is_available())"
 
       - name: Install vLLM (optional accelerator, with rollback)
+        if: inputs.use_vllm == 'true'
         continue-on-error: true
         run: |
           # The runner's driver is CUDA 12.2, which is why pyproject pins torch
@@ -75,7 +92,7 @@ jobs:
           # So: install, verify, and roll back if torch lost CUDA.
           export UV_CACHE_DIR="$HOME/.cache/uv"
           torch_ok() { uv run python -c "import torch,sys; sys.exit(0 if torch.cuda.is_available() else 1)" 2>/dev/null; }
-          if uv pip install ${VLLM_SPEC:-vllm}; then
+          if uv pip install "${{ inputs.vllm_spec }}"; then
             if torch_ok; then
               uv run python -c "import vllm,torch; print('[vllm] ok', vllm.__version__, 'torch', torch.__version__)" || true
             else
