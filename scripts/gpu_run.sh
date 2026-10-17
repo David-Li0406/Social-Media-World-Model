@@ -51,6 +51,10 @@ if [[ "$MODE" == "benchmark" ]]; then
   RUN_NAME="$RUN_NAME" DATA_ROOT="$DATA_ROOT" LANES="${LANES:-}" \
     ./scripts/gpu_benchmark.sh \
     2>&1 | tee "$OUT_DIR/train.log"
+elif [[ "$MODE" == "replyforecast" ]]; then
+  echo "[gpu_run] MODE=replyforecast -> reference + forecast + judge across GPUs 4-7"
+  RUN_NAME="$RUN_NAME" DATA_ROOT="$DATA_ROOT" ./scripts/gpu_summarize.sh \
+    2>&1 | tee "$OUT_DIR/train.log"
 elif [[ "$MODE" == "summarize" ]]; then
   # Phase B of the reply_summary target: generate summaries for the subset
   # whose real reply texts were recovered on Machine A. Resumable, so a

@@ -26,21 +26,41 @@ def _truncate(s: str, n: int) -> str:
     return s if len(s) <= n else s[:n] + "…"
 
 
-def build_judge_prompt(stimulus_body: str, reference: str, candidate: str) -> str:
+def build_judge_prompt(stimulus_body: str, reference: str, candidate: str,
+                       replies: list | None = None) -> str:
+    """Rate a PREDICTED reply-summary against what actually happened.
+
+    `replies` carries the real reply texts. When present they are the primary
+    reference and the model-written summary is demoted to a secondary aid: the
+    generated summary is itself Qwen output, so judging against it alone
+    measures agreement with that model rather than with reality. The raw
+    replies were unavailable when this file was first written; they are
+    retained now, so prefer them.
+    """
+    if replies:
+        shown = "\n".join(f"  - {(r.get('body') or '')[:300]}" for r in replies[:12])
+        ref_block = (
+            f"ACTUAL REPLIES the comment received:\n{shown}\n\n"
+            + (f"A neutral summary of those replies:\n{_truncate(reference, 600)}\n\n"
+               if reference else "")
+        )
+        what = ("how well the PREDICTED summary anticipates the actual replies above "
+                "-- their key points, topics and overall sentiment toward the comment")
+    else:
+        ref_block = f"REFERENCE summary:\n{_truncate(reference, 800)}\n\n"
+        what = ("how well the PREDICTED summary captures the key points, topics and "
+                "overall sentiment of the REFERENCE summary")
     return (
-        "You are a strict evaluator of social-media reply summaries.\n\n"
-        "A model was asked to summarize the replies to the COMMENT below. You "
-        "are given the gold REFERENCE summary (which faithfully summarizes the "
-        "real replies) and the model's PREDICTED summary. Rate how well the "
-        "PREDICTED summary captures the key points, topics, and overall "
-        "sentiment of the REFERENCE summary.\n\n"
+        "You are a strict evaluator of predicted social-media replies.\n\n"
+        "A model was shown only the COMMENT below (never the replies) and asked to "
+        f"predict what replies it would receive. Rate {what}.\n\n"
         f"COMMENT:\n{_truncate(stimulus_body, 600)}\n\n"
-        f"REFERENCE summary:\n{_truncate(reference, 800)}\n\n"
+        f"{ref_block}"
         f"PREDICTED summary:\n{_truncate(candidate, 800)}\n\n"
         "Scale:\n"
-        "  5 = captures essentially all main points and the sentiment\n"
-        "  4 = captures most points and the sentiment\n"
-        "  3 = partially captures; misses some points or nuance\n"
+        "  5 = anticipates essentially all main points and the sentiment\n"
+        "  4 = anticipates most points and the sentiment\n"
+        "  3 = partially right; misses some points or nuance\n"
         "  2 = largely misses the points or sentiment\n"
         "  1 = unrelated, generic, or contradictory\n\n"
         'Return ONLY a JSON object: {"rating": <1-5 integer>, "reason": "<one short sentence>"}'

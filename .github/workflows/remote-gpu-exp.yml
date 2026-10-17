@@ -26,7 +26,7 @@ on:
         required: true
         default: "train"
         type: choice
-        options: ["train", "infer", "judge", "summarize", "benchmark"]
+        options: ["train", "infer", "judge", "summarize", "benchmark", "replyforecast"]
 
 jobs:
   run:
@@ -63,7 +63,7 @@ jobs:
           # index in pyproject.toml ([tool.uv.sources]) because the runner's
           # driver is CUDA 12.2 and the default cu13 wheel reports "driver too
           # old"; cu121 is forward-compatible with 12.2.
-          uv sync --python 3.12 --extra llm_sft
+          uv sync --python 3.12 --extra llm_sft --extra retrieval
 
       - name: Prepare data
         run: |
@@ -120,5 +120,6 @@ jobs:
             runs/${{ inputs.run_name }}/judge_ratings.jsonl
             runs/${{ inputs.run_name }}/summaries.jsonl
             runs/${{ inputs.run_name }}/metrics.txt
+            runs/${{ inputs.run_name }}/judge_summary.json
             runs/${{ inputs.run_name }}/*.log
             runs/${{ inputs.run_name }}/*.jsonl

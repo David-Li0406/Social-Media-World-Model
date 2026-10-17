@@ -82,6 +82,9 @@ def main():
     ap.add_argument("--max-replies", type=int, default=20,
                     help="cap replies fed to the summarizer (long threads blow up the prompt)")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--shard", type=int, default=0, help="this shard index (0-based)")
+    ap.add_argument("--num-shards", type=int, default=1,
+                    help="split the input N ways so one GPU can take each shard")
     ap.add_argument("--load-in-4bit", action="store_true")
     args = ap.parse_args()
 
@@ -103,6 +106,8 @@ def main():
     skipped = [r for r in rows if r.get("summarizable") is False]
     todo = [r for r in rows if r["record_id"] not in already
             and r.get("summarizable") is not False]
+    if args.num_shards > 1:
+        todo = [r for i, r in enumerate(todo) if i % args.num_shards == args.shard]
     if args.limit:
         todo = todo[: args.limit]
     print(f"{len(rows):,} records | {len(already):,} already summarized | "
