@@ -29,7 +29,9 @@ for f in \
   "train_test/RC_2025-12_politics_width_chain01_test.jsonl" \
   "train_test/summary_subset.jsonl" \
   "train_test/bench_temporal_train.jsonl.gz" \
-  "train_test/bench_temporal_eval.jsonl.gz"
+  "train_test/bench_temporal_eval.jsonl.gz" \
+  "train_test/forecast_train.jsonl.gz" \
+  "train_test/forecast_eval.jsonl.gz"
 do
   src="$REPO_ROOT/$f"
   if [ ! -f "$src" ]; then
