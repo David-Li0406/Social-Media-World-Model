@@ -9,6 +9,7 @@ OUT_DIR="runs/$RUN_NAME"; mkdir -p "$OUT_DIR"
 SUBSET="${FC_EVAL:-$DATA_ROOT/forecast_eval.jsonl.gz}"
 JUDGE_MODEL="${JUDGE_MODEL:-Qwen/Qwen3-32B}"
 PRED_DIR="${PRED_DIR:-forecast_preds}"
+FAILED=0
 
 for pf in "$PRED_DIR"/*.jsonl; do
   tag="$(basename "$pf" .jsonl)"
@@ -25,7 +26,13 @@ for pf in "$PRED_DIR"/*.jsonl; do
   done
   wait
   cat "$OUT_DIR"/ratings_${tag}_*.jsonl > "$OUT_DIR/ratings_${tag}.jsonl" 2>/dev/null
-  echo "[judge] $tag -> $(wc -l < "$OUT_DIR/ratings_${tag}.jsonl" 2>/dev/null || echo 0) ratings"
+  n=$(wc -l < "$OUT_DIR/ratings_${tag}.jsonl" 2>/dev/null || echo 0)
+  echo "[judge] $tag -> $n ratings"
+  if [ "$n" -eq 0 ]; then
+    echo "[judge] $tag produced nothing; shard 0 log tail:" >&2
+    tail -6 "$OUT_DIR/judge_${tag}_0.log" >&2 2>/dev/null
+    FAILED=$((FAILED+1))
+  fi
 done
 
 uv run python - "$OUT_DIR" <<'PYEOF'
@@ -48,4 +55,8 @@ for k, v in sorted(out.items(), key=lambda kv: -(kv[1]["vs_replies"]["mean"] or 
     print(f"{k:26s} n={v['n']:>5}  vs_replies={v['vs_replies']['mean']:.3f}  "
           f"vs_summary={v['vs_summary']['mean']:.3f}")
 PYEOF
+if [ "$FAILED" -gt 0 ]; then
+  echo "[judge] FATAL: $FAILED model(s) produced no ratings" >&2
+  exit 1
+fi
 echo "[judge] done $(date +%T)"

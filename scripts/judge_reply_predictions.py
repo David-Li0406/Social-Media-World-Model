@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 os.environ.setdefault("HF_HOME", "/scratch/daweili5/hf_cache")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
+from smwm.data.io import read_jsonl  # noqa: E402
 from smwm.eval.judge import build_judge_prompt, parse_rating  # noqa: E402
 
 
@@ -44,16 +45,10 @@ def main():
     if not torch.cuda.is_available():
         sys.exit("needs a GPU")
 
-    sub = {}
-    for l in open(args.subset, encoding="utf-8"):
-        if l.strip():
-            r = json.loads(l); sub[r["record_id"]] = r
-    preds = {}
-    for l in open(args.predictions, encoding="utf-8"):
-        if l.strip():
-            r = json.loads(l)
-            if r.get("predicted_summary"):
-                preds[r["record_id"]] = r["predicted_summary"]
+    # read_jsonl is gzip-aware; the subset ships as .jsonl.gz
+    sub = {r["record_id"]: r for r in read_jsonl(args.subset)}
+    preds = {r["record_id"]: r["predicted_summary"]
+             for r in read_jsonl(args.predictions) if r.get("predicted_summary")}
 
     done = set()
     out_path = Path(args.output)
