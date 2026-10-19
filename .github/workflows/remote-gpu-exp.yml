@@ -34,7 +34,7 @@ on:
         required: true
         default: "train"
         type: choice
-        options: ["train", "infer", "judge", "summarize", "benchmark", "replyforecast", "llmsweep"]
+        options: ["train", "infer", "judge", "summarize", "benchmark", "replyforecast", "llmsweep", "judgesweep"]
 
 jobs:
   run:
