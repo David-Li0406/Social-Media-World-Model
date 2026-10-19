@@ -57,7 +57,9 @@ elif [[ "$MODE" == "judgesweep" ]]; then
     2>&1 | tee "$OUT_DIR/train.log"
 elif [[ "$MODE" == "llmsweep" ]]; then
   echo "[gpu_run] MODE=llmsweep -> LLM sweep + one-for-all across GPUs 4-7"
-  RUN_NAME="$RUN_NAME" DATA_ROOT="$DATA_ROOT" ./scripts/gpu_llm_sweep.sh \
+  RUN_NAME="$RUN_NAME" DATA_ROOT="$DATA_ROOT" \
+    SWEEP_LANES="${LANES:-qwen3_4b qwen3_8b llama31_8b oneforall}" \
+    ./scripts/gpu_llm_sweep.sh \
     2>&1 | tee "$OUT_DIR/train.log"
 elif [[ "$MODE" == "replyforecast" ]]; then
   echo "[gpu_run] MODE=replyforecast -> reference + forecast + judge across GPUs 4-7"

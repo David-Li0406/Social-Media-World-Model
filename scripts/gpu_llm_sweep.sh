@@ -16,7 +16,12 @@ OUT_DIR="runs/$RUN_NAME"; mkdir -p "$OUT_DIR"
 TRAIN="${FC_TRAIN:-$DATA_ROOT/forecast_train.jsonl.gz}"
 EVAL="${FC_EVAL:-$DATA_ROOT/forecast_eval.jsonl.gz}"
 EVAL_LIMIT="${EVAL_LIMIT:-2000}"
+# SWEEP_LANES restricts the run to named lanes, so a single failed model can be
+# retried without repeating the lanes that already succeeded.
+SWEEP_LANES="${SWEEP_LANES:-qwen3_4b qwen3_8b llama31_8b oneforall}"
+want() { case " $SWEEP_LANES " in *" $1 "*) return 0;; *) return 1;; esac; }
 nvidia-smi --query-gpu=index,name,memory.total --format=csv,noheader || true
+echo "[sweep] lanes=$SWEEP_LANES"
 echo "[sweep] train=$TRAIN eval=$EVAL"
 
 run() { # gpu tag extra-args...
@@ -36,12 +41,12 @@ lane() { # gpu model short
         --train "$TRAIN" --epochs 1 ) &
 }
 
-lane 4 "Qwen/Qwen3-4B"                  qwen3_4b
-lane 5 "Qwen/Qwen3-8B"                  qwen3_8b
-lane 6 "meta-llama/Llama-3.1-8B-Instruct" llama31_8b
+want qwen3_4b   && lane 4 "Qwen/Qwen3-4B"                    qwen3_4b
+want qwen3_8b   && lane 5 "Qwen/Qwen3-8B"                    qwen3_8b
+want llama31_8b && lane 6 "meta-llama/Llama-3.1-8B-Instruct" llama31_8b
 
 # GPU 7: the two one-for-all settings, same backbone, same data, same eval
-( run 7 "allgen_qwen3_4b"    --model Qwen/Qwen3-4B --arch generative \
+want oneforall && ( run 7 "allgen_qwen3_4b"    --model Qwen/Qwen3-4B --arch generative \
       --tasks score,controversiality,width,summary --train "$TRAIN" --epochs 1
   run 7 "allhybrid_qwen3_4b" --model Qwen/Qwen3-4B --arch hybrid \
       --tasks score,controversiality,width,summary --train "$TRAIN" --epochs 1 ) &
