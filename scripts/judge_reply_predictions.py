@@ -35,15 +35,21 @@ def main():
     ap.add_argument("--num-shards", type=int, default=1)
     ap.add_argument("--load-in-4bit", action="store_true",
                     help="HF engine only; vLLM serves bf16 and manages its own KV cache")
-    ap.add_argument("--engine", default="auto", choices=["auto", "vllm", "hf"],
+    ap.add_argument("--engine", default="auto", choices=["auto", "vllm", "hf", "mock"],
                     help="auto = use vLLM when importable, else fall back to transformers")
     ap.add_argument("--gpu-mem-util", type=float, default=0.90)
     args = ap.parse_args()
 
-    import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-    if not torch.cuda.is_available():
-        sys.exit("needs a GPU")
+    # "mock" exercises every non-generation stage -- subset/prediction loading,
+    # sharding, resume, prompt assembly, rating parse, aggregation -- with no
+    # GPU. All three previous judge failures were in exactly those stages
+    # (gzip read, dependency resolution, foreign OOM), never in the model, so
+    # this is the part worth testing cheaply.
+    if args.engine != "mock":
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+        if not torch.cuda.is_available():
+            sys.exit("needs a GPU")
 
     # read_jsonl is gzip-aware; the subset ships as .jsonl.gz
     sub = {r["record_id"]: r for r in read_jsonl(args.subset)}
@@ -67,63 +73,79 @@ def main():
     if not ids:
         return
 
-    tok = AutoTokenizer.from_pretrained(args.judge)
-    if tok.pad_token is None: tok.pad_token = tok.eos_token
-    tok.padding_side = "left"
-
-    def chat(p):
-        return tok.apply_chat_template([{"role": "user", "content": p}], tokenize=False,
-                                       add_generation_prompt=True, enable_thinking=False)
-
-    engine = args.engine
-    if engine in ("auto", "vllm"):
-        try:
-            from vllm import LLM, SamplingParams
-        except Exception as e:
-            if engine == "vllm":
-                sys.exit(f"--engine vllm requested but vLLM is unavailable: {e}")
-            # Falling back keeps the pipeline runnable on a runner without vLLM
-            # rather than failing the whole job over an optional accelerator.
-            print(f"[judge] vLLM unavailable ({type(e).__name__}); falling back to transformers",
-                  flush=True)
-            engine = "hf"
-        else:
-            engine = "vllm"
-
-    if engine == "vllm":
-        print(f"[judge] engine=vLLM model={args.judge}", flush=True)
-        llm = LLM(model=args.judge, dtype="bfloat16", trust_remote_code=True,
-                  gpu_memory_utilization=args.gpu_mem_util, max_model_len=3072)
-        sp = SamplingParams(temperature=0.0, max_tokens=args.max_new_tokens)
+    if args.engine == "mock":
+        import random as _r
+        _rng = _r.Random(0)
+        print("[judge] engine=MOCK (no GPU; generation is simulated)", flush=True)
 
         def run(prompts):
-            # vLLM does continuous batching internally, so hand it everything
-            # at once instead of fixed-size chunks.
-            outs = llm.generate([chat(p) for p in prompts], sp)
-            return [o.outputs[0].text.strip() for o in outs]
+            # emit the shapes a real judge produces, including a malformed one,
+            # so the parser's fallback path is covered too
+            out = []
+            for i, _ in enumerate(prompts):
+                r = _rng.randint(1, 5)
+                out.append('{"rating": %d, "reason": "mock"}' % r if i % 7
+                           else 'Rating: %d -- unparseable prose' % r)
+            return out
+        chunk_size = max(args.batch_size, 256)
     else:
-        print(f"[judge] engine=transformers model={args.judge}", flush=True)
-        kw = {"device_map": "cuda:0"}
-        if args.load_in_4bit:
-            from transformers import BitsAndBytesConfig
-            kw["quantization_config"] = BitsAndBytesConfig(
-                load_in_4bit=True, bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.bfloat16)
+        tok = AutoTokenizer.from_pretrained(args.judge)
+        if tok.pad_token is None: tok.pad_token = tok.eos_token
+        tok.padding_side = "left"
+
+        def chat(p):
+            return tok.apply_chat_template([{"role": "user", "content": p}], tokenize=False,
+                                           add_generation_prompt=True, enable_thinking=False)
+
+        engine = args.engine
+        if engine in ("auto", "vllm"):
+            try:
+                from vllm import LLM, SamplingParams
+            except Exception as e:
+                if engine == "vllm":
+                    sys.exit(f"--engine vllm requested but vLLM is unavailable: {e}")
+                # Falling back keeps the pipeline runnable on a runner without vLLM
+                # rather than failing the whole job over an optional accelerator.
+                print(f"[judge] vLLM unavailable ({type(e).__name__}); falling back to transformers",
+                      flush=True)
+                engine = "hf"
+            else:
+                engine = "vllm"
+
+        if engine == "vllm":
+            print(f"[judge] engine=vLLM model={args.judge}", flush=True)
+            llm = LLM(model=args.judge, dtype="bfloat16", trust_remote_code=True,
+                      gpu_memory_utilization=args.gpu_mem_util, max_model_len=3072)
+            sp = SamplingParams(temperature=0.0, max_tokens=args.max_new_tokens)
+
+            def run(prompts):
+                # vLLM does continuous batching internally, so hand it everything
+                # at once instead of fixed-size chunks.
+                outs = llm.generate([chat(p) for p in prompts], sp)
+                return [o.outputs[0].text.strip() for o in outs]
         else:
-            kw["dtype"] = torch.bfloat16
-        model = AutoModelForCausalLM.from_pretrained(args.judge, **kw); model.eval()
+            print(f"[judge] engine=transformers model={args.judge}", flush=True)
+            kw = {"device_map": "cuda:0"}
+            if args.load_in_4bit:
+                from transformers import BitsAndBytesConfig
+                kw["quantization_config"] = BitsAndBytesConfig(
+                    load_in_4bit=True, bnb_4bit_quant_type="nf4",
+                    bnb_4bit_compute_dtype=torch.bfloat16)
+            else:
+                kw["dtype"] = torch.bfloat16
+            model = AutoModelForCausalLM.from_pretrained(args.judge, **kw); model.eval()
 
-        def run(prompts):
-            enc = tok([chat(p) for p in prompts], return_tensors="pt", padding=True,
-                      truncation=True, max_length=3072).to(model.device)
-            with torch.no_grad():
-                gen = model.generate(**enc, max_new_tokens=args.max_new_tokens,
-                                     pad_token_id=tok.pad_token_id)
-            return [tok.decode(g[enc.input_ids.shape[1]:], skip_special_tokens=True).strip()
-                    for g in gen]
+            def run(prompts):
+                enc = tok([chat(p) for p in prompts], return_tensors="pt", padding=True,
+                          truncation=True, max_length=3072).to(model.device)
+                with torch.no_grad():
+                    gen = model.generate(**enc, max_new_tokens=args.max_new_tokens,
+                                         pad_token_id=tok.pad_token_id)
+                return [tok.decode(g[enc.input_ids.shape[1]:], skip_special_tokens=True).strip()
+                        for g in gen]
 
-    # vLLM schedules its own batches; a large outer chunk just amortizes file IO.
-    chunk_size = max(args.batch_size, 256) if engine == "vllm" else args.batch_size
+        # vLLM schedules its own batches; a large outer chunk amortizes file IO.
+        chunk_size = max(args.batch_size, 256) if engine == "vllm" else args.batch_size
 
     t0 = time.time()
     out_path.parent.mkdir(parents=True, exist_ok=True)
