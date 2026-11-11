@@ -32,9 +32,10 @@ ALL_TASKS = ["score", "controversiality", "width", "summary"]
 
 
 COT_SUFFIX = (
-    "\n\nThink step by step about who reads this comment, how the subreddit "
-    "usually reacts, and what the thread position implies. Then give your final "
-    "answer as a single JSON object on the last line."
+    "\n\nFirst reason in AT MOST 3 short sentences about who reads this comment, "
+    "how this subreddit usually reacts, and what the thread position implies. "
+    "Then, on the last line, give the complete JSON object. Keep the reasoning "
+    "brief -- the JSON must be finished, not cut off."
 )
 
 

@@ -51,6 +51,10 @@ if [[ "$MODE" == "benchmark" ]]; then
   RUN_NAME="$RUN_NAME" DATA_ROOT="$DATA_ROOT" LANES="${LANES:-}" \
     ./scripts/gpu_benchmark.sh \
     2>&1 | tee "$OUT_DIR/train.log"
+elif [[ "$MODE" == "cotjudge" ]]; then
+  echo "[gpu_run] MODE=cotjudge -> CoT sweep then LLM-as-a-judge, GPUs 4-7"
+  RUN_NAME="$RUN_NAME" DATA_ROOT="$DATA_ROOT" ./scripts/gpu_cot_judge.sh \
+    2>&1 | tee "$OUT_DIR/train.log"
 elif [[ "$MODE" == "cotsweep" ]]; then
   echo "[gpu_run] MODE=cotsweep -> 10-model CoT inference across GPUs 4-7"
   RUN_NAME="$RUN_NAME" DATA_ROOT="$DATA_ROOT" ./scripts/gpu_cot_sweep.sh \

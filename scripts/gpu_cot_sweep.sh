@@ -55,7 +55,7 @@ run() { # gpu tag model [batch]
   uv run python scripts/train_multitask.py \
     --model "$model" --tasks "$TASKS" --cot --zero-shot \
     --eval "$EVAL" --eval-limit "$EVAL_LIMIT" \
-    --gen-batch "$bs" --max-new-tokens 320 \
+    --gen-batch "$bs" --max-new-tokens "${COT_MAX_NEW:-640}" \
     --out "$OUT_DIR/${tag}.jsonl" > "$OUT_DIR/${tag}.log" 2>&1
   echo "[$tag] GPU $gpu exit=$? $(date +%T)"
 }
