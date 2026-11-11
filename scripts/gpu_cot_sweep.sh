@@ -16,7 +16,25 @@ EVAL="${FC_EVAL:-$DATA_ROOT/forecast_eval.jsonl.gz}"
 EVAL_LIMIT="${EVAL_LIMIT:-2000}"
 GEN_BS="${GEN_BATCH:-16}"
 TASKS="score,controversiality,width,summary"
+wait_for_gpus() { # <min_free_MiB> <max_wait_minutes>
+  local need="$1" maxmin="$2" waited=0
+  while :; do
+    local free_ok
+    free_ok=$(nvidia-smi --id=4,5,6,7 --query-gpu=memory.free --format=csv,noheader,nounits 2>/dev/null \
+              | awk -v n="$need" 'BEGIN{c=0} {if ($1+0 >= n) c++} END{print c}')
+    [ "${free_ok:-0}" -ge 4 ] && { echo "[gpu-wait] all 4 GPUs have >= ${need}MiB free after ${waited}m"; return 0; }
+    if [ "$waited" -ge "$maxmin" ]; then
+      echo "[gpu-wait] FATAL: after ${maxmin}m only ${free_ok:-0}/4 GPUs have >= ${need}MiB free" >&2
+      nvidia-smi --query-gpu=index,memory.used,memory.total,utilization.gpu --format=csv >&2
+      return 1
+    fi
+    [ $((waited % 15)) -eq 0 ] && echo "[gpu-wait] ${free_ok:-0}/4 GPUs free; waited ${waited}m of ${maxmin}m"
+    sleep 60; waited=$((waited+1))
+  done
+}
+
 nvidia-smi --query-gpu=index,memory.used,memory.total --format=csv,noheader || true
+wait_for_gpus "${MIN_FREE_MIB:-60000}" "${GPU_WAIT_MIN:-720}" || exit 1
 echo "[cot] eval=$EVAL limit=$EVAL_LIMIT"
 
 run() { # gpu tag model
