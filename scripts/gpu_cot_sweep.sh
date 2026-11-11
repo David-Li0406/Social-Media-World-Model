@@ -48,32 +48,31 @@ nvidia-smi --query-gpu=index,memory.used,memory.total --format=csv,noheader || t
 wait_for_gpus "${MIN_FREE_MIB:-60000}" "${GPU_WAIT_MIN:-720}" || exit 1
 echo "[cot] eval=$EVAL limit=$EVAL_LIMIT"
 
-run() { # gpu tag model
-  local gpu="$1" tag="$2" model="$3"
-  echo "[$tag] GPU $gpu start $(date +%T)"
+run() { # gpu tag model [batch]
+  local gpu="$1" tag="$2" model="$3" bs="${4:-$GEN_BS}"
+  echo "[$tag] GPU $gpu start $(date +%T) batch=$bs"
   CUDA_VISIBLE_DEVICES="$gpu" PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
   uv run python scripts/train_multitask.py \
     --model "$model" --tasks "$TASKS" --cot --zero-shot \
     --eval "$EVAL" --eval-limit "$EVAL_LIMIT" \
-    --gen-batch "$GEN_BS" --max-new-tokens 320 \
+    --gen-batch "$bs" --max-new-tokens 320 \
     --out "$OUT_DIR/${tag}.jsonl" > "$OUT_DIR/${tag}.log" 2>&1
   echo "[$tag] GPU $gpu exit=$? $(date +%T)"
 }
 
-# GPU 4 - the single largest model
-( run 4 cot_mistral_small_24b "mistralai/Mistral-Small-24B-Instruct-2501" ) &
-# GPU 5 - two ~9B
-( run 5 cot_gemma2_9b   "google/gemma-2-9b-it"
-  run 5 cot_llama31_8b  "meta-llama/Llama-3.1-8B-Instruct" ) &
-# GPU 6 - two ~7-8B
-( run 6 cot_ministral_8b "mistralai/Ministral-8B-Instruct-2410"
-  run 6 cot_mistral_7b   "mistralai/Mistral-7B-Instruct-v0.3" ) &
-# GPU 7 - the five small ones
-( run 7 cot_qwen35_4b   "Qwen/Qwen3.5-4B"
-  run 7 cot_llama32_3b  "meta-llama/Llama-3.2-3B-Instruct"
-  run 7 cot_qwen35_2b   "Qwen/Qwen3.5-2B"
-  run 7 cot_llama32_1b  "meta-llama/Llama-3.2-1B-Instruct"
-  run 7 cot_qwen35_08b  "Qwen/Qwen3.5-0.8B" ) &
+# Batch scales with free memory after weights: a 24B in bf16 eats ~48GB and
+# leaves room for ~24; a 0.8B leaves nearly the whole card. GPU 4 carries only
+# the 24B because it sets the critical path.
+( run 4 cot_mistral_small_24b "mistralai/Mistral-Small-24B-Instruct-2501" 24 ) &
+( run 5 cot_gemma2_9b   "google/gemma-2-9b-it"                 32
+  run 5 cot_qwen35_4b   "Qwen/Qwen3.5-4B"                      64
+  run 5 cot_qwen35_08b  "Qwen/Qwen3.5-0.8B"                    96 ) &
+( run 6 cot_llama31_8b  "meta-llama/Llama-3.1-8B-Instruct"     32
+  run 6 cot_ministral_8b "mistralai/Ministral-8B-Instruct-2410" 32
+  run 6 cot_llama32_1b  "meta-llama/Llama-3.2-1B-Instruct"     96 ) &
+( run 7 cot_mistral_7b  "mistralai/Mistral-7B-Instruct-v0.3"   32
+  run 7 cot_llama32_3b  "meta-llama/Llama-3.2-3B-Instruct"     64
+  run 7 cot_qwen35_2b   "Qwen/Qwen3.5-2B"                      80 ) &
 
 wait
 echo "[cot] all lanes finished $(date +%T)"
