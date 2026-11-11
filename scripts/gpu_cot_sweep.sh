@@ -18,6 +18,17 @@ GEN_BS="${GEN_BATCH:-16}"
 TASKS="score,controversiality,width,summary"
 wait_for_gpus() { # <min_free_MiB> <max_wait_minutes>
   local need="$1" maxmin="$2" waited=0
+  # Fail fast if the requested indices do not exist on this host -- the runner
+  # may have moved to a machine with a different GPU count, and waiting 12h for
+  # cards that are not there is the worst outcome.
+  local total
+  total=$(nvidia-smi --query-gpu=index --format=csv,noheader 2>/dev/null | wc -l)
+  if [ "${total:-0}" -lt 8 ]; then
+    echo "[gpu-wait] FATAL: host has ${total:-0} GPUs; this sweep targets indices 4-7" >&2
+    nvidia-smi --query-gpu=index,name,memory.total --format=csv >&2
+    return 1
+  fi
+  echo "[gpu-wait] host has $total GPUs; targeting 4,5,6,7"
   while :; do
     local free_ok
     free_ok=$(nvidia-smi --id=4,5,6,7 --query-gpu=memory.free --format=csv,noheader,nounits 2>/dev/null \
