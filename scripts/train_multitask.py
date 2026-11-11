@@ -31,7 +31,14 @@ from smwm.data.io import read_jsonl  # noqa: E402
 ALL_TASKS = ["score", "controversiality", "width", "summary"]
 
 
-def build_prompt(rec: dict, tasks: list[str]) -> str:
+COT_SUFFIX = (
+    "\n\nThink step by step about who reads this comment, how the subreddit "
+    "usually reacts, and what the thread position implies. Then give your final "
+    "answer as a single JSON object on the last line."
+)
+
+
+def build_prompt(rec: dict, tasks: list[str], cot: bool = False) -> str:
     stim = rec["stimulus"]; meta = rec.get("meta", {}); ctx = rec.get("context", [])[-4:]
     ts = int(meta.get("created_utc") or stim.get("created_utc") or 0)
     when = dt.datetime.fromtimestamp(ts, dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC") if ts else "unknown"
@@ -50,7 +57,9 @@ def build_prompt(rec: dict, tasks: list[str]) -> str:
         "Conversation so far (oldest first):\n" + "\n".join(lines) + "\n\n"
         f"The COMMENT just posted:\n{(stim.get('body') or '')[:1500]}\n\n"
         "Predict the engagement this comment will receive.\n"
-        "Return ONLY a JSON object with exactly these fields:\n" + "\n".join(want)
+        + ("Reason briefly, then return a JSON object with exactly these fields:\n"
+         if cot else "Return ONLY a JSON object with exactly these fields:\n")
+        + "\n".join(want) + (COT_SUFFIX if cot else "")
     )
 
 
@@ -82,6 +91,9 @@ def main():
     ap.add_argument("--train-limit", type=int, default=0)
     ap.add_argument("--eval-limit", type=int, default=0)
     ap.add_argument("--zero-shot", action="store_true", help="skip training entirely")
+    ap.add_argument("--cot", action="store_true",
+                    help="ask for reasoning before the JSON; the parser already takes the "
+                         "last {...} span, so prose in front is harmless")
     args = ap.parse_args()
     tasks = [t for t in args.tasks.split(",") if t in ALL_TASKS]
 
@@ -148,7 +160,7 @@ def main():
             opt.zero_grad()
             for s in range(0, len(tr), args.batch_size):
                 batch = [tr[i] for i in order[s : s + args.batch_size]]
-                prompts = [build_prompt(r, tasks) for r in batch]
+                prompts = [build_prompt(r, tasks, args.cot) for r in batch]
                 loss = 0.0
                 if gen_tasks:
                     txt = [p + "\n" + build_target(r, gen_tasks) + tok.eos_token
@@ -190,12 +202,19 @@ def main():
     t0 = time.time()
     for s in range(0, len(ev), args.gen_batch):
         batch = ev[s : s + args.gen_batch]
-        prompts = [build_prompt(r, tasks) for r in batch]
+        prompts = [build_prompt(r, tasks, args.cot) for r in batch]
         pred = [{} for _ in batch]
         if gen_tasks:
-            chat = [tok.apply_chat_template([{"role": "user", "content": p}], tokenize=False,
-                                            add_generation_prompt=True, enable_thinking=False)
-                    for p in prompts]
+            def _chat(p):
+                msg = [{"role": "user", "content": p}]
+                try:   # enable_thinking is Qwen-specific; gemma/mistral reject it
+                    return tok.apply_chat_template(msg, tokenize=False,
+                                                   add_generation_prompt=True,
+                                                   enable_thinking=False)
+                except TypeError:
+                    return tok.apply_chat_template(msg, tokenize=False,
+                                                   add_generation_prompt=True)
+            chat = [_chat(p) for p in prompts]
             enc = tok(chat, return_tensors="pt", padding=True, truncation=True,
                       max_length=args.max_length).to("cuda")
             with torch.no_grad():
